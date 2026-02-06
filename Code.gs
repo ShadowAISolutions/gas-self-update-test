@@ -13,17 +13,17 @@ function doGet() {
         button   { background: #1976d2; color: white; border: none; padding: 12px 24px;
                    border-radius: 6px; cursor: pointer; font-size: 16px; margin: 5px; }
         button:hover { background: #1565c0; }
-        h1 { color: #1976d2; }
+        h1 { color: #e65100; }
         #result { margin-top: 15px; padding: 15px; border-radius: 8px; display: none; }
       </style>
     </head>
     <body>
-      <h1>🔵 GitHub → Apps Script Test</h1>
+      <h1>🟠 GitHub → Apps Script Test — UPDATED!</h1>
       <div class="version">
-        <strong>Current Version:</strong> 1.0 — Original deployment
+        <strong>Current Version:</strong> 2.0 — Updated from GitHub! 🎉
       </div>
       <div class="status">
-        <strong>Message:</strong> Hello from the ORIGINAL code!
+        <strong>Message:</strong> Hello from the UPDATED code pulled from GitHub!
       </div>
       <p>This page is served by Google Apps Script. The code comes from GitHub.</p>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
@@ -66,7 +66,7 @@ function doGet() {
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 1.0";
+         "<br><b>Code version:</b> 2.0";
 }
 
 function pullFromGitHub() {
