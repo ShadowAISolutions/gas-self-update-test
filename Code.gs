@@ -1,7 +1,7 @@
 // =============================================
 // VERSION — change this one number to update everything
 // =============================================
-var VERSION = "1.3";
+var VERSION = "1.4";
 
 function doGet() {
   var html = `
