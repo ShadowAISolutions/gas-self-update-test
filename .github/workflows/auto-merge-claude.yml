@@ -23,4 +23,4 @@ jobs:
         run: |
           BRANCH="${GITHUB_REF#refs/heads/}"
           PR_URL=$(gh pr create --title "Auto-merge: ${BRANCH}" --body "Automated merge from Claude Code" --base main --head "$BRANCH" 2>/dev/null || gh pr view "$BRANCH" --json url -q .url)
-          gh pr merge "$PR_URL" --merge --auto
+          gh pr merge "$PR_URL" --merge --delete-branch
