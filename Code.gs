@@ -236,7 +236,7 @@
 //
 // =============================================
 
-var VERSION = "3.5";
+var VERSION = "3.6";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -247,12 +247,18 @@ function doGet() {
       <meta http-equiv="Pragma" content="no-cache">
       <meta http-equiv="Expires" content="0">
       <style>
-        body { font-family: Arial; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        body { font-family: Arial; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px 0; }
         #version { font-size: 120px; font-weight: bold; color: #e65100; }
         button { background: #e65100; color: white; border: none; padding: 12px 24px;
                  border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 20px; }
         button:hover { background: #bf360c; }
         #result { margin-top: 15px; padding: 15px; border-radius: 8px; font-size: 14px; }
+        #sheet-container { margin-top: 25px; width: 90%; max-width: 600px; }
+        #sheet-container h3 { text-align: center; color: #333; margin-bottom: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
+        th { background: #e65100; color: white; }
+        tr:nth-child(even) { background: #f9f9f9; }
       </style>
     </head>
     <body>
@@ -260,6 +266,11 @@ function doGet() {
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
       <div id="result"></div>
+
+      <div id="sheet-container">
+        <h3>Live_Sheet</h3>
+        <div id="sheet-table">Loading...</div>
+      </div>
 
       <script>
         function applyData(data) {
@@ -269,9 +280,34 @@ function doGet() {
           }
         }
 
+        function renderSheet(rows) {
+          if (!rows || rows.length === 0) {
+            document.getElementById('sheet-table').innerHTML = '<em>No data</em>';
+            return;
+          }
+          var html = '<table><tr>';
+          for (var c = 0; c < rows[0].length; c++) {
+            html += '<th>' + (rows[0][c] || '') + '</th>';
+          }
+          html += '</tr>';
+          for (var r = 1; r < rows.length; r++) {
+            html += '<tr>';
+            for (var c = 0; c < rows[r].length; c++) {
+              html += '<td>' + (rows[r][c] || '') + '</td>';
+            }
+            html += '</tr>';
+          }
+          html += '</table>';
+          document.getElementById('sheet-table').innerHTML = html;
+        }
+
         google.script.run
           .withSuccessHandler(applyData)
           .getAppData();
+
+        google.script.run
+          .withSuccessHandler(renderSheet)
+          .getSheetData();
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
@@ -286,8 +322,12 @@ function doGet() {
                   .withSuccessHandler(function(data) {
                     applyData(data);
                     document.getElementById('result').innerHTML = '';
-                    // Write to spreadsheet using the NEW deployed code
-                    google.script.run.writeVersionToSheet();
+                    // Write to spreadsheet using the NEW deployed code, then refresh table
+                    google.script.run
+                      .withSuccessHandler(function() {
+                        google.script.run.withSuccessHandler(renderSheet).getSheetData();
+                      })
+                      .writeVersionToSheet();
                   })
                   .getAppData();
               }, 2000);
@@ -317,6 +357,13 @@ function getTitle() {
 
 function getAppData() {
   return { version: "v" + VERSION, title: TITLE };
+}
+
+function getSheetData() {
+  var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
+  var sheet = ss.getSheetByName("Live_Sheet");
+  if (!sheet) return [];
+  return sheet.getRange(1, 1, 10, 5).getDisplayValues();
 }
 
 function writeVersionToSheet() {
