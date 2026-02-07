@@ -209,7 +209,7 @@
 //
 // =============================================
 
-var VERSION = "2.5";
+var VERSION = "2.6";
 var TITLE = "Welcome";
 
 function doGet() {
@@ -306,6 +306,15 @@ function pullFromGitHub() {
   });
   var newCode = response.getContentText();
 
+  // Extract VERSION from the pulled code
+  var versionMatch = newCode.match(/var VERSION\s*=\s*"([^"]+)"/);
+  var pulledVersion = versionMatch ? versionMatch[1] : null;
+
+  // If the pulled version matches what's already running, skip deployment
+  if (pulledVersion && pulledVersion === VERSION) {
+    return "Already up to date (v" + VERSION + ")";
+  }
+
   var scriptId = ScriptApp.getScriptId();
   var url = "https://script.googleapis.com/v1/projects/" + scriptId + "/content";
   var current = UrlFetchApp.fetch(url, {
@@ -333,7 +342,7 @@ function pullFromGitHub() {
     method: "post",
     contentType: "application/json",
     headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() },
-    payload: JSON.stringify({ description: "Auto-updated from GitHub " + new Date().toLocaleString() })
+    payload: JSON.stringify({ description: "v" + pulledVersion + " — from GitHub " + new Date().toLocaleString() })
   });
   var newVersion = JSON.parse(versionResponse.getContentText()).versionNumber;
 
@@ -347,10 +356,10 @@ function pullFromGitHub() {
       deploymentConfig: {
         scriptId: scriptId,
         versionNumber: newVersion,
-        description: "v" + newVersion + " — auto-deployed from GitHub"
+        description: "v" + pulledVersion + " (deployment " + newVersion + ")"
       }
     })
   });
 
-  return "Done! Version " + newVersion;
+  return "Updated to v" + pulledVersion + " (deployment " + newVersion + ")";
 }
