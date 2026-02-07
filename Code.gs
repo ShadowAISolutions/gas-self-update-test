@@ -527,8 +527,8 @@
 //
 // =============================================
 
-var VERSION = "1.26";
-var TITLE = "uhuhhh";
+var VERSION = "1.27";
+var TITLE = "lets go";
 
 function doGet() {
   var html = `
