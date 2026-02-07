@@ -276,22 +276,166 @@
 // ----------------------------
 // The web app shows daily token/quota info to the right of the Live_Sheet
 // title in small gray text, refreshed every 60 seconds via fetchGitHubQuotaAndLimits().
+// fetchGitHubQuotaAndLimits() returns an object with github, urlFetch,
+// spreadsheet, and execTime fields. Only GitHub is live; rest are static.
 //
-// Quotas tracked:
-//   - GitHub API: remaining/limit per hour — queried live via
-//     GET https://api.github.com/rate_limit (uses GITHUB_TOKEN if set).
-//     5,000/hr with token, 60/hr without. Each page load uses 1 call
-//     (auto-pull) + 1 call (rate limit check).
-//   - UrlFetchApp: 20,000/day (consumer). NOT queryable — shows limit only.
-//     Used by: pullAndDeployFromGitHub() (GitHub + Apps Script API calls).
-//   - SpreadsheetApp: ~20,000 reads/day. NOT queryable — shows limit only.
-//     Used by: readB1FromCacheOrSheet() every 10s, writeVersionToSheetA1() on each deploy.
-//   - Apps Script execution time: 90 min/day. NOT queryable — shows limit.
-//     Every google.script.run call consumes execution time.
+// COMPLETE CALL AUDIT — EVERY EXTERNAL CALL IN THE SYSTEM
+// --------------------------------------------------------
+// This section documents every API call, service call, and resource
+// consumption that occurs, organized by trigger event. Use this to
+// understand quota burn rate and why each optimization exists.
 //
-// fetchGitHubQuotaAndLimits() is a server function that returns an object with
-// github, urlFetch, spreadsheet, and execTime fields. Only GitHub
-// is live data; the rest are static limit reminders.
+// ┌─────────────────────────────────────────────────────────────────┐
+// │ EVENT: PAGE LOAD (happens once per browser load/redirect)       │
+// ├─────────────────────────────────────────────────────────────────┤
+// │ 1. getAppData()                                                │
+// │    └─ 0 external calls (returns in-memory vars)                │
+// │    └─ 1 google.script.run (execution time)                     │
+// │                                                                │
+// │ 2. checkForUpdates() → pullAndDeployFromGitHub()               │
+// │    └─ 1 UrlFetchApp: GitHub API GET /contents/Code.gs          │
+// │    └─ 1 GitHub API call (counts toward rate limit)             │
+// │    IF version matches (already up to date):                    │
+// │      └─ 0 more calls, returns early                            │
+// │    IF new version detected (full deploy):                      │
+// │      └─ 1 UrlFetchApp: Apps Script API GET /content            │
+// │      └─ 1 UrlFetchApp: Apps Script API PUT /content            │
+// │      └─ 1 UrlFetchApp: Apps Script API POST /versions          │
+// │      └─ 1 UrlFetchApp: Apps Script API PUT /deployments        │
+// │      └─ 1 google.script.run: getAppData() (post-deploy)       │
+// │      └─ 1 google.script.run: writeVersionToSheetA1()          │
+// │         └─ 1 SpreadsheetApp: write A1                          │
+// │      └─ REDIRECT (triggers another full page load)             │
+// │    Subtotal per load: 1-5 UrlFetchApp, 1 GitHub API,           │
+// │      0-1 SpreadsheetApp, 2-4 google.script.run                 │
+// │                                                                │
+// │ 3. pollB1FromCache() — first call                              │
+// │    └─ 1 google.script.run → readB1FromCacheOrSheet()           │
+// │      └─ 1 CacheService.get("live_b1")                         │
+// │      └─ IF cache hit: 0 more (most common)                    │
+// │      └─ IF cache miss: 1 SpreadsheetApp read B1 + cache put   │
+// │                                                                │
+// │ 4. pollQuotaAndLimits() — first call                           │
+// │    └─ 1 google.script.run → fetchGitHubQuotaAndLimits()       │
+// │      └─ 1 UrlFetchApp: GitHub API GET /rate_limit              │
+// │      └─ 1 GitHub API call (counts toward rate limit)           │
+// └─────────────────────────────────────────────────────────────────┘
+//
+// ┌─────────────────────────────────────────────────────────────────┐
+// │ EVENT: EVERY 15 SECONDS (two polling loops)                    │
+// ├─────────────────────────────────────────────────────────────────┤
+// │ 1. pollB1FromCache() → readB1FromCacheOrSheet()                │
+// │    └─ 1 google.script.run (execution time ~30ms)               │
+// │    └─ 1 CacheService.get("live_b1")                            │
+// │    └─ IF cache hit: 0 more calls (normal path)                 │
+// │    └─ IF cache miss: 1 SpreadsheetApp read (rare, every 6hrs)  │
+// │                                                                │
+// │ 2. pollPushedVersionFromCache() → readPushedVersionFromCache() │
+// │    └─ 1 google.script.run (execution time ~30ms)               │
+// │    └─ 1 CacheService.get("pushed_version")                     │
+// │    └─ 0 SpreadsheetApp, 0 UrlFetchApp, 0 GitHub API            │
+// │    └─ IF new version detected: triggers checkForUpdates()      │
+// │       (see PAGE LOAD event #2 above for those calls)           │
+// │                                                                │
+// │ Per 15s tick: 2 google.script.run, 2 CacheService reads        │
+// │ Per day: 5,760 google.script.run, 5,760 CacheService reads    │
+// │          (×2 = 11,520 total from both loops)                   │
+// └─────────────────────────────────────────────────────────────────┘
+//
+// ┌─────────────────────────────────────────────────────────────────┐
+// │ EVENT: EVERY 60 SECONDS (quota display refresh)                │
+// ├─────────────────────────────────────────────────────────────────┤
+// │ pollQuotaAndLimits() → fetchGitHubQuotaAndLimits()             │
+// │    └─ 1 google.script.run (execution time ~100ms)              │
+// │    └─ 1 UrlFetchApp: GitHub API GET /rate_limit                │
+// │    └─ 1 GitHub API call                                        │
+// │                                                                │
+// │ Per day: 1,440 google.script.run, 1,440 UrlFetchApp,           │
+// │          1,440 GitHub API calls                                 │
+// └─────────────────────────────────────────────────────────────────┘
+//
+// ┌─────────────────────────────────────────────────────────────────┐
+// │ EVENT: SPREADSHEET B1 EDITED (installable trigger)             │
+// ├─────────────────────────────────────────────────────────────────┤
+// │ onEditWriteB1ToCache(e)                                        │
+// │    └─ 1 CacheService.put("live_b1", value, 21600)              │
+// │    └─ 0 UrlFetchApp, 0 GitHub API, 0 SpreadsheetApp            │
+// │    └─ Only fires for B1 edits on Live_Sheet                    │
+// └─────────────────────────────────────────────────────────────────┘
+//
+// ┌─────────────────────────────────────────────────────────────────┐
+// │ EVENT: GITHUB PUSH (GitHub Action → doPost)                    │
+// ├─────────────────────────────────────────────────────────────────┤
+// │ GitHub Action curl → doPost(e)                                 │
+// │    └─ 1 SpreadsheetApp: write C1                               │
+// │    └─ 1 CacheService.put("pushed_version", value, 3600)        │
+// │    └─ 0 UrlFetchApp, 0 GitHub API                              │
+// │    └─ Only fires once per push (not polling)                   │
+// └─────────────────────────────────────────────────────────────────┘
+//
+// DAILY TOTALS (1 browser tab open 24hrs, no deploys)
+// ---------------------------------------------------
+//   GitHub API:       ~1,442/day   (limit: 5,000/hr with token)
+//     └─ 1,440 from pollQuotaAndLimits (every 60s)
+//     └─ 1 from page load auto-pull
+//     └─ 1 from page load quota check
+//
+//   UrlFetchApp:      ~1,442/day   (limit: 20,000/day)
+//     └─ 1,440 from pollQuotaAndLimits (every 60s)
+//     └─ 1 from page load auto-pull (GitHub API)
+//     └─ 1 from page load quota check
+//
+//   SpreadsheetApp:   ~4/day       (limit: ~20,000/day)
+//     └─ ~4 from readB1FromCacheOrSheet cache misses (every 6hrs)
+//     └─ 0 from polling (cache handles it)
+//
+//   CacheService:     ~11,520/day  (no daily limit)
+//     └─ 5,760 from pollB1FromCache (every 15s)
+//     └─ 5,760 from pollPushedVersionFromCache (every 15s)
+//
+//   google.script.run: ~12,966/day (limit: none, but burns exec time)
+//     └─ 11,520 from 15s polls (2 calls × 5,760)
+//     └─ 1,440 from 60s polls
+//     └─ ~6 from page load
+//
+//   Execution time:   ~10-11 min/day  (limit: 90 min/day)
+//     └─ ~11,520 CacheService reads × ~30ms = ~5.8 min
+//     └─ ~1,440 UrlFetchApp calls × ~200ms = ~4.8 min
+//     └─ Each additional tab multiplies this
+//
+// COST OPTIMIZATION MEASURES
+// --------------------------
+//   1. CacheService for B1 reads:
+//      WITHOUT: 5,760 SpreadsheetApp reads/day (every 15s)
+//      WITH:    ~4 SpreadsheetApp reads/day (cache miss every 6hrs)
+//      SAVINGS: 99.9% reduction in SpreadsheetApp calls
+//
+//   2. CacheService for pushed_version detection:
+//      WITHOUT: Would need to poll GitHub API or SpreadsheetApp C1
+//               every 15s = 5,760 extra API calls/day
+//      WITH:    5,760 CacheService reads (free, no quota impact)
+//      SAVINGS: 5,760 fewer UrlFetchApp or SpreadsheetApp calls/day
+//
+//   3. Version comparison in pullAndDeployFromGitHub():
+//      WITHOUT: Every page load = 5 UrlFetchApp calls (full deploy)
+//      WITH:    1 UrlFetchApp call when already up to date
+//      SAVINGS: 4 UrlFetchApp calls per page load (80% reduction)
+//
+//   4. onEditWriteB1ToCache trigger (push model):
+//      WITHOUT: Must poll SpreadsheetApp to detect B1 changes
+//      WITH:    Trigger pushes to cache on edit, polls read cache
+//      SAVINGS: Eliminates all SpreadsheetApp polling for B1
+//
+//   5. doPost cache flag for push detection:
+//      WITHOUT: Would need to poll GitHub API for new commits
+//      WITH:    GitHub Action POSTs once → cache flag → client polls cache
+//      SAVINGS: Eliminates GitHub API polling for version detection
+//
+// WARNING — MULTIPLE TABS:
+//   Each open browser tab runs its own polling loops independently.
+//   2 tabs = 2× all daily totals. With 3+ tabs, execution time
+//   (90 min/day limit) becomes the binding constraint.
+//   Recommendation: keep to 1-2 tabs max.
 //
 // API ENDPOINTS USED
 // ------------------
@@ -361,7 +505,7 @@
 //
 // =============================================
 
-var VERSION = "1.15";
+var VERSION = "1.16";
 var TITLE = "Yessir1";
 
 function doGet() {
