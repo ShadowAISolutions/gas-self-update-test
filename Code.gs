@@ -54,14 +54,30 @@
 //   click "Pull Latest" in the web app to deploy.
 //
 // IMPORTANT — KEEP THIS OVERVIEW UP TO DATE:
-//   Whenever you (Claude Code) make a STRUCTURAL change to this file
-//   (new functions, changed architecture, new integrations, new config
-//   variables like SPREADSHEET_ID or DEPLOYMENT_ID, changed pull flow,
-//   etc.), you MUST update the relevant section of this overview in
-//   the same commit. Do NOT document simple variable changes (like
-//   bumping VERSION or changing TITLE), but DO document anything that
-//   affects how the system works. This overview is the only context
-//   a future Claude Code session will have — keep it accurate.
+//   You (Claude Code) will often work on this file in a BRAND NEW chat
+//   session with ZERO prior context. This overview is your ONLY source
+//   of truth for understanding how the system works. If something is
+//   not documented here, you will not know about it.
+//
+//   Therefore, whenever you make ANY of the following changes, you MUST
+//   update the relevant section of this overview IN THE SAME COMMIT:
+//     - New or removed functions
+//     - Changes to the pull/deploy flow
+//     - New integrations (APIs, services, external calls)
+//     - New config variables or Script Properties
+//     - Changes to how data flows (client ↔ server)
+//     - New HTML elements or UI sections
+//     - Changes to OAuth scopes or permissions
+//     - Architectural decisions or gotchas discovered
+//
+//   Do NOT document trivial variable changes (bumping VERSION, changing
+//   TITLE text), but DO document everything structural. When in doubt,
+//   document it — a future you with no context will thank you.
+//
+//   Think of this overview as a self-contained briefing document. If a
+//   new Claude Code session reads ONLY this comment block, it should
+//   understand every function, every integration, every config value,
+//   and every gotcha without needing to ask the user.
 //
 // IMPORTANT — AUTO-INCREMENT VERSION ON EVERY COMMIT:
 //   Whenever you (Claude Code) make ANY change to this file and commit,
@@ -246,7 +262,7 @@
 //
 // =============================================
 
-var VERSION = "3.9";
+var VERSION = "4.0";
 var TITLE = "Whatup";
 
 function doGet() {
