@@ -586,7 +586,7 @@
 //
 // =============================================
 
-var VERSION = "1.62";
+var VERSION = "1.63";
 var TITLE = "Attempt 8";
 
 function doGet() {
@@ -639,6 +639,20 @@ function doGet() {
       </div>
 
       <script>
+        function playReadySound() {
+          try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = 0.3;
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+          } catch(e) {}
+        }
+
         function applyData(data) {
           for (var key in data) {
             var el = document.getElementById(key);
@@ -647,7 +661,7 @@ function doGet() {
         }
 
         google.script.run
-          .withSuccessHandler(applyData)
+          .withSuccessHandler(function(data) { applyData(data); playReadySound(); })
           .getAppData();
 
         // Poll cell B1 from cache every 15s (cache is updated by onEditWriteB1ToCache trigger)
