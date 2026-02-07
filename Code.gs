@@ -212,40 +212,15 @@
 // DEPLOYMENT_ID → from Deploy → Manage deployments in the Apps Script editor
 //                 (this is the long AKfycb... string, NOT the web app URL)
 //
-// LIVE SPREADSHEET DATA DISPLAY (CACHE-OPTIMIZED)
-// -------------------------------------------------
-// The web app displays live data from cell B1 of the Live_Sheet tab,
-// shown above the embedded sheet iframe in the #live-b1 element.
-//
-// How it works:
-//   - Client-side JS calls google.script.run.getLiveB1() every 10 seconds
-//   - getLiveB1() reads from CacheService FIRST (very fast, no spreadsheet
-//     quota used). Only falls back to SpreadsheetApp.openById() on cache miss.
-//   - An installable onEdit trigger (onEditB1) fires whenever the spreadsheet
-//     is edited. If the edit is cell B1 on Live_Sheet, it writes the new
-//     value to CacheService.getScriptCache() with a 6-hour TTL.
-//   - This means ~99% of getLiveB1() calls hit the cache, and SpreadsheetApp
-//     is only called once on cache miss (every 6hrs or first load).
-//   - The Google Sheet is also embedded as a read-only iframe using:
-//     https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?rm=minimal
-//
-// IMPORTANT — INSTALLABLE TRIGGER REQUIRED:
-//   The onEditB1 function must be installed as an installable trigger
-//   (simple onEdit triggers cannot use CacheService). To install:
-//     1. Open the Apps Script editor
-//     2. Click the clock icon (Triggers) in the left sidebar
-//     3. Click "+ Add Trigger" (bottom right)
-//     4. Set: Function = onEditB1, Event source = From spreadsheet,
-//        Event type = On edit
-//     5. Save and authorize when prompted
-//   Without this trigger, the cache will never be populated by edits,
-//   and getLiveB1() will always fall back to SpreadsheetApp (still works,
-//   just uses more quota).
+// EMBEDDED SPREADSHEET
+// --------------------
+// The Google Sheet is embedded as a read-only iframe using:
+//   https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?rm=minimal
+// No server-side polling is done for cell data — the iframe shows live data.
 //
 // NOTE: Client-side approaches (gviz/tq via fetch or JSONP) do NOT work
-// because the Apps Script sandbox CSP blocks both cross-origin fetch and
-// dynamically injected external script tags. google.script.run is the
-// only reliable way to get external data into the sandbox.
+// in the Apps Script sandbox due to CSP restrictions. If live cell data
+// is needed outside the iframe, use google.script.run sparingly.
 //
 // TOKEN / QUOTA USAGE DISPLAY
 // ----------------------------
@@ -336,7 +311,7 @@
 //
 // =============================================
 
-var VERSION = "1.03";
+var VERSION = "1.04";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -368,7 +343,6 @@ function doGet() {
 
       <div id="sheet-container">
         <h3>Live_Sheet <span id="token-info">...</span></h3>
-        <div id="live-b1" style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 4px; text-align: center;">...</div>
         <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"></iframe>
       </div>
 
@@ -386,17 +360,6 @@ function doGet() {
 
         // Auto-pull from GitHub on every page load
         checkForUpdates();
-
-        // Fetch cell B1 from Live_Sheet via google.script.run (every 10s)
-        function fetchLiveB1() {
-          google.script.run
-            .withSuccessHandler(function(val) {
-              document.getElementById('live-b1').textContent = val;
-            })
-            .getLiveB1();
-        }
-        fetchLiveB1();
-        setInterval(fetchLiveB1, 10000);
 
         // Fetch token/quota usage (on load + every 60s)
         function fetchTokenUsage() {
@@ -487,36 +450,6 @@ function getTokenUsage() {
   result.execTime = "90 min/day";
 
   return result;
-}
-
-function getLiveB1() {
-  // Try cache first (written by onEditB1 trigger — no SpreadsheetApp quota used)
-  var cache = CacheService.getScriptCache();
-  var cached = cache.get("live_b1");
-  if (cached !== null) return cached;
-
-  // Cache miss — fall back to SpreadsheetApp and populate cache
-  var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
-  var sheet = ss.getSheetByName("Live_Sheet");
-  if (!sheet) return "";
-  var val = sheet.getRange("B1").getValue();
-  var result = val !== null && val !== undefined ? String(val) : "";
-  cache.put("live_b1", result, 21600); // 6 hours
-  return result;
-}
-
-// Installable onEdit trigger — must be installed manually (see instructions below).
-// Fires on every edit in the spreadsheet. If cell B1 on Live_Sheet was edited,
-// writes the new value to CacheService so getLiveB1() can read it without
-// calling SpreadsheetApp.
-function onEditB1(e) {
-  if (!e || !e.range) return;
-  var sheet = e.range.getSheet();
-  if (sheet.getName() !== "Live_Sheet") return;
-  if (e.range.getRow() !== 1 || e.range.getColumn() !== 2) return;
-  var val = e.range.getValue();
-  var result = val !== null && val !== undefined ? String(val) : "";
-  CacheService.getScriptCache().put("live_b1", result, 21600); // 6 hours
 }
 
 function writeVersionToSheet() {
