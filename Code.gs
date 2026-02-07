@@ -299,7 +299,7 @@
 //
 // =============================================
 
-var VERSION = "4.8";
+var VERSION = "4.9";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -346,8 +346,30 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Auto-pull from GitHub on every page load
-        checkForUpdates();
+        // Auto-pull from GitHub on every page load (silent on failure)
+        google.script.run
+          .withSuccessHandler(function(msg) {
+            document.getElementById('result').style.background = '#e8f5e9';
+            document.getElementById('result').innerHTML = '✅ ' + msg;
+            if (msg.indexOf('Updated') === 0) {
+              setTimeout(function() {
+                document.getElementById('result').innerHTML = '⏳ Loading new version...';
+                google.script.run
+                  .withSuccessHandler(function(data) {
+                    applyData(data);
+                    document.getElementById('result').innerHTML = '';
+                    google.script.run.writeVersionToSheet();
+                  })
+                  .getAppData();
+              }, 2000);
+            } else {
+              setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
+            }
+          })
+          .withFailureHandler(function() {
+            document.getElementById('result').innerHTML = '';
+          })
+          .pullFromGitHub();
 
         // Fetch cell B1 from Live_Sheet via google.script.run (every 10s)
         function fetchLiveB1() {
