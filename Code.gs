@@ -126,7 +126,7 @@
 //   hide errors silently. The manual button still works too.
 //
 // Pull flow when the button is clicked (or on auto-pull):
-//   1. pullFromGitHub() fetches Code.gs from GitHub API
+//   1. pullAndDeployFromGitHub() fetches Code.gs from GitHub API
 //      (uses api.github.com, NOT raw.githubusercontent.com which has
 //      a 5-minute CDN cache that causes stale pulls)
 //   2. Extracts VERSION from the pulled code using regex and compares
@@ -143,16 +143,16 @@
 //      via google.script.run which executes the NEW server-side code,
 //      updating all dynamic values without a page reload
 //   7. After getAppData() succeeds, the client also calls
-//      writeVersionToSheet() which writes "v" + VERSION to cell A1
+//      writeVersionToSheetA1() which writes "v" + VERSION to cell A1
 //      of the "Live_Sheet" tab in the linked Google Sheet.
 //      IMPORTANT: This is called from the CLIENT-SIDE callback, NOT
-//      from inside pullFromGitHub(). This is critical because
-//      pullFromGitHub() runs as the OLD deployed code (VERSION still
-//      holds the previous value). By calling writeVersionToSheet()
+//      from inside pullAndDeployFromGitHub(). This is critical because
+//      pullAndDeployFromGitHub() runs as the OLD deployed code (VERSION still
+//      holds the previous value). By calling writeVersionToSheetA1()
 //      from the post-pull callback, it executes as the NEW code
 //      where VERSION is correct. This pattern should be used for
 //      any post-deployment side effects — always trigger them from
-//      the client callback, never from pullFromGitHub() itself.
+//      the client callback, never from pullAndDeployFromGitHub() itself.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -203,7 +203,7 @@
 // - var VERSION at the top is the single source for the displayed version.
 //   Change only this value on GitHub to update what the web app shows.
 //
-// CONFIG VARIABLES (in pullFromGitHub)
+// CONFIG VARIABLES (in pullAndDeployFromGitHub)
 // ------------------------------------
 // GITHUB_OWNER  → GitHub username or organization
 // GITHUB_REPO   → repository name
@@ -218,23 +218,23 @@
 //   https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?rm=minimal
 //
 // Cell B1 from Live_Sheet is displayed above the iframe in #live-b1.
-// It is fetched ONCE on page load via getLiveB1() — NO polling.
+// It is polled every 15s via readB1FromCacheOrSheet() (cache-backed, cheap).
 //
-// getLiveB1() reads from CacheService first (fast, no spreadsheet quota).
+// readB1FromCacheOrSheet() reads from CacheService first (fast, no spreadsheet quota).
 // Only falls back to SpreadsheetApp on cache miss (every 6hrs or first load).
 //
-// An installable onEdit trigger (onEditB1) keeps the cache fresh:
+// An installable onEdit trigger (onEditWriteB1ToCache) keeps the cache fresh:
 //   - Fires on every spreadsheet edit
 //   - If the edit is cell B1 on Live_Sheet, writes the new value to
 //     CacheService.getScriptCache() with a 6-hour TTL
 //   - This means subsequent page loads read from cache, not SpreadsheetApp
 //
 // IMPORTANT — INSTALLABLE TRIGGER REQUIRED:
-//   onEditB1 must be installed manually (simple onEdit can't use CacheService):
+//   onEditWriteB1ToCache must be installed manually (simple onEdit can't use CacheService):
 //     1. Apps Script editor → Triggers (clock icon) → + Add Trigger
-//     2. Function: onEditB1, Event source: From spreadsheet, Event type: On edit
+//     2. Function: onEditWriteB1ToCache, Event source: From spreadsheet, Event type: On edit
 //     3. Save and authorize
-//   Without this trigger, getLiveB1() always falls back to SpreadsheetApp.
+//   Without this trigger, readB1FromCacheOrSheet() always falls back to SpreadsheetApp.
 //
 // NOTE: Client-side approaches (gviz/tq via fetch or JSONP) do NOT work
 // in the Apps Script sandbox due to CSP restrictions.
@@ -250,7 +250,7 @@
 //   doPost() reads e.parameter.action and e.parameter.value, writes to C1.
 //
 // doPost() also sets a "pushed_version" cache flag. The client polls
-// getPushedVersion() every 15 seconds. If the pushed version differs from
+// readPushedVersionFromCache() every 15 seconds. If the pushed version differs from
 // the currently displayed version, it auto-triggers checkForUpdates() —
 // so the web app deploys itself within ~15 seconds of a push, fully
 // automatic with no user interaction.
@@ -259,9 +259,9 @@
 //   1. Claude Code pushes to claude/* branch
 //   2. GitHub Action merges to main + POSTs to doPost()
 //   3. doPost() writes C1 + sets "pushed_version" in cache
-//   4. Client polls getPushedVersion() every 15s
+//   4. Client polls readPushedVersionFromCache() every 15s
 //   5. Detects new version → auto-triggers checkForUpdates()
-//   6. pullFromGitHub() deploys the new code
+//   6. pullAndDeployFromGitHub() deploys the new code
 //   7. App updates dynamically — zero manual clicks
 //
 // NOTE: doPost() runs on the CURRENTLY DEPLOYED code, not the just-pushed
@@ -270,7 +270,7 @@
 // TOKEN / QUOTA USAGE DISPLAY
 // ----------------------------
 // The web app shows daily token/quota info to the right of the Live_Sheet
-// title in small gray text, refreshed every 60 seconds via getTokenUsage().
+// title in small gray text, refreshed every 60 seconds via fetchGitHubQuotaAndLimits().
 //
 // Quotas tracked:
 //   - GitHub API: remaining/limit per hour — queried live via
@@ -278,13 +278,13 @@
 //     5,000/hr with token, 60/hr without. Each page load uses 1 call
 //     (auto-pull) + 1 call (rate limit check).
 //   - UrlFetchApp: 20,000/day (consumer). NOT queryable — shows limit only.
-//     Used by: pullFromGitHub() (GitHub + Apps Script API calls).
+//     Used by: pullAndDeployFromGitHub() (GitHub + Apps Script API calls).
 //   - SpreadsheetApp: ~20,000 reads/day. NOT queryable — shows limit only.
-//     Used by: getLiveB1() every 10s, writeVersionToSheet() on each deploy.
+//     Used by: readB1FromCacheOrSheet() every 10s, writeVersionToSheetA1() on each deploy.
 //   - Apps Script execution time: 90 min/day. NOT queryable — shows limit.
 //     Every google.script.run call consumes execution time.
 //
-// getTokenUsage() is a server function that returns an object with
+// fetchGitHubQuotaAndLimits() is a server function that returns an object with
 // github, urlFetch, spreadsheet, and execTime fields. Only GitHub
 // is live data; the rest are static limit reminders.
 //
@@ -356,7 +356,7 @@
 //
 // =============================================
 
-var VERSION = "1.12";
+var VERSION = "1.13";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -406,21 +406,21 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Fetch cell B1 from cache every 15s (cache is updated by onEditB1 trigger)
-        function fetchLiveB1() {
+        // Poll cell B1 from cache every 15s (cache is updated by onEditWriteB1ToCache trigger)
+        function pollB1FromCache() {
           google.script.run
             .withSuccessHandler(function(val) {
               document.getElementById('live-b1').textContent = val;
             })
-            .getLiveB1();
+            .readB1FromCacheOrSheet();
         }
-        fetchLiveB1();
-        setInterval(fetchLiveB1, 15000);
+        pollB1FromCache();
+        setInterval(pollB1FromCache, 15000);
 
-        // Check for new pushed version every 15s (set by doPost via GitHub Action)
+        // Poll for new pushed version every 15s (set by doPost via GitHub Action)
         // If a new version was pushed, auto-pull without user intervention
         var _autoPulling = false;
-        function checkPushedVersion() {
+        function pollPushedVersionFromCache() {
           if (_autoPulling) return;
           google.script.run
             .withSuccessHandler(function(pushed) {
@@ -432,15 +432,15 @@ function doGet() {
                 setTimeout(function() { _autoPulling = false; }, 30000);
               }
             })
-            .getPushedVersion();
+            .readPushedVersionFromCache();
         }
-        setInterval(checkPushedVersion, 15000);
+        setInterval(pollPushedVersionFromCache, 15000);
 
         // Auto-pull from GitHub on every page load
         checkForUpdates();
 
-        // Fetch token/quota usage (on load + every 60s)
-        function fetchTokenUsage() {
+        // Poll token/quota usage (on load + every 60s)
+        function pollQuotaAndLimits() {
           google.script.run
             .withSuccessHandler(function(t) {
               document.getElementById('token-info').innerHTML =
@@ -449,10 +449,10 @@ function doGet() {
                 + '<div>Sheets: ' + t.spreadsheet + '</div>'
                 + '<div>Exec: ' + t.execTime + '</div>';
             })
-            .getTokenUsage();
+            .fetchGitHubQuotaAndLimits();
         }
-        fetchTokenUsage();
-        setInterval(fetchTokenUsage, 60000);
+        pollQuotaAndLimits();
+        setInterval(pollQuotaAndLimits, 60000);
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
@@ -468,7 +468,7 @@ function doGet() {
                     applyData(data);
                     document.getElementById('result').innerHTML = '';
                     // Write to spreadsheet using the NEW deployed code
-                    google.script.run.writeVersionToSheet();
+                    google.script.run.writeVersionToSheetA1();
                   })
                   .getAppData();
               }, 2000);
@@ -477,7 +477,7 @@ function doGet() {
               document.getElementById('result').style.background = '#ffebee';
               document.getElementById('result').innerHTML = '❌ ' + err.message;
             })
-            .pullFromGitHub();
+            .pullAndDeployFromGitHub();
         }
       </script>
     </body>
@@ -518,7 +518,7 @@ function getAppData() {
   return { version: "v" + VERSION, title: TITLE };
 }
 
-function getTokenUsage() {
+function fetchGitHubQuotaAndLimits() {
   var result = {};
 
   // GitHub API rate limit (queryable)
@@ -548,11 +548,11 @@ function getTokenUsage() {
   return result;
 }
 
-function getPushedVersion() {
+function readPushedVersionFromCache() {
   return CacheService.getScriptCache().get("pushed_version") || "";
 }
 
-function getLiveB1() {
+function readB1FromCacheOrSheet() {
   var cache = CacheService.getScriptCache();
   var cached = cache.get("live_b1");
   if (cached !== null) return cached;
@@ -568,8 +568,8 @@ function getLiveB1() {
 
 // Installable onEdit trigger. Writes B1 value to CacheService when edited.
 // Install: Apps Script editor → Triggers → + Add Trigger →
-//   Function: onEditB1, Event source: From spreadsheet, Event type: On edit
-function onEditB1(e) {
+//   Function: onEditWriteB1ToCache, Event source: From spreadsheet, Event type: On edit
+function onEditWriteB1ToCache(e) {
   if (!e || !e.range) return;
   var sheet = e.range.getSheet();
   if (sheet.getName() !== "Live_Sheet") return;
@@ -579,7 +579,7 @@ function onEditB1(e) {
   CacheService.getScriptCache().put("live_b1", result, 21600);
 }
 
-function writeVersionToSheet() {
+function writeVersionToSheetA1() {
   var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
   var sheet = ss.getSheetByName("Live_Sheet");
   if (!sheet) {
@@ -588,7 +588,7 @@ function writeVersionToSheet() {
   sheet.getRange("A1").setValue("v" + VERSION);
 }
 
-function pullFromGitHub() {
+function pullAndDeployFromGitHub() {
   var GITHUB_OWNER = "ShadowAISolutions";
   var GITHUB_REPO  = "gas-self-update-test";
   var GITHUB_BRANCH = "main";
