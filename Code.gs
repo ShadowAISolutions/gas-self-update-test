@@ -20,7 +20,7 @@ function doGet() {
     <body>
       <h1>🟠 GitHub → Apps Script — UPDATED!</h1>
       <div class="version">
-        <strong>Current Version:</strong> 6.0 — Updated from GitHub! 🎉
+        <strong>Current Version:</strong> 7.0 — Updated from GitHub! 🎉
       </div>
       <div class="status">
         <strong>Message:</strong> Hello from the UPDATED code pulled from GitHub!
@@ -66,7 +66,7 @@ function doGet() {
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 6.0";
+         "<br><b>Code version:</b> 7.0";
 }
 
 function pullFromGitHub() {
