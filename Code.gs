@@ -211,7 +211,7 @@
 //
 // =============================================
 
-var VERSION = "2.9";
+var VERSION = "3.0";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -292,13 +292,13 @@ function getAppData() {
   return { version: VERSION, title: TITLE };
 }
 
-function writeVersionToSheet() {
+function writeVersionToSheet(version) {
   var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
   var sheet = ss.getSheetByName("Live_Sheet");
   if (!sheet) {
     sheet = ss.insertSheet("Live_Sheet");
   }
-  sheet.getRange("A1").setValue(VERSION);
+  sheet.getRange("A1").setValue(version || VERSION);
 }
 
 function pullFromGitHub() {
@@ -372,8 +372,9 @@ function pullFromGitHub() {
     })
   });
 
-  // Write the new version to the Live_Sheet tab
-  writeVersionToSheet();
+  // Write the new version to the Live_Sheet tab (pass pulledVersion
+  // because VERSION still holds the old value in this execution context)
+  writeVersionToSheet(pulledVersion);
 
   return "Updated to v" + pulledVersion + " (deployment " + newVersion + ")";
 }
