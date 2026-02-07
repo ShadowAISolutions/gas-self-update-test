@@ -116,7 +116,14 @@
 //   - This bypasses Google's aggressive server-side HTML caching
 //     which cannot be disabled on Apps Script web apps
 //
-// Pull flow when the button is clicked:
+// AUTO-PULL ON PAGE LOAD:
+//   Every time the web app is loaded/reloaded, checkForUpdates() is
+//   called automatically. This means the app always pulls the latest
+//   code from GitHub on load — if a new version is available, it deploys
+//   and refreshes the dynamic content. If already up to date, it shows
+//   "Already up to date" briefly. The manual button still works too.
+//
+// Pull flow when the button is clicked (or on auto-pull):
 //   1. pullFromGitHub() fetches Code.gs from GitHub API
 //      (uses api.github.com, NOT raw.githubusercontent.com which has
 //      a 5-minute CDN cache that causes stale pulls)
@@ -292,7 +299,7 @@
 //
 // =============================================
 
-var VERSION = "4.5";
+var VERSION = "4.6";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -337,6 +344,9 @@ function doGet() {
         google.script.run
           .withSuccessHandler(applyData)
           .getAppData();
+
+        // Auto-pull from GitHub on every page load
+        checkForUpdates();
 
         // Fetch cell B1 from Live_Sheet via google.script.run (every 10s)
         function fetchLiveB1() {
