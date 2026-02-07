@@ -5,9 +5,53 @@
 // WHAT THIS IS
 // ------------
 // A Google Apps Script web app that pulls its own source code from
-// a GitHub repository and redeploys itself via a single button click.
-// GitHub is the source of truth. Editing Code.gs on GitHub and clicking
-// "Pull Latest" in the web app updates the live deployment instantly.
+// a GitHub repository and redeploys itself. GitHub is the source of
+// truth — this file (Code.gs) is the ONLY file you need to edit.
+//
+// There are TWO ways updates reach the live web app:
+//   1. MANUAL: Click "Pull Latest" in the web app UI
+//   2. AUTOMATIC: Edit Code.gs via Claude Code (or any push to a
+//      claude/* branch) — a GitHub Action auto-merges to main, then
+//      clicking "Pull Latest" in the web app picks up the change
+//
+// REPO STRUCTURE
+// --------------
+// Code.gs                              ← this file (the entire app)
+// .claude/settings.json                ← auto-allows git commands for Claude Code
+// .github/workflows/auto-merge-claude.yml ← auto-merges claude/* branches to main
+//
+// CI/CD: CLAUDE CODE → GITHUB → APPS SCRIPT
+// ------------------------------------------
+// This repo is set up so that Claude Code (Anthropic's AI coding tool)
+// can edit Code.gs and have changes flow to main automatically:
+//
+//   1. Claude Code edits Code.gs (e.g. bumps VERSION)
+//   2. Claude Code commits and pushes to a claude/* branch
+//      (it cannot push directly to main — only to claude/* branches)
+//   3. A GitHub Action (.github/workflows/auto-merge-claude.yml)
+//      triggers on any push to claude/**, checks out main, merges
+//      the claude branch, and pushes main — no PR review needed
+//   4. The web app's "Pull Latest" button fetches Code.gs from
+//      main via the GitHub API and redeploys the Apps Script project
+//
+// Key files that enable this:
+//
+//   .claude/settings.json:
+//     { "permissions": { "allow": ["Bash(git *)"] } }
+//     This tells Claude Code to auto-approve all git commands
+//     without prompting the user for confirmation each time.
+//
+//   .github/workflows/auto-merge-claude.yml:
+//     Triggers on push to claude/** branches. Checks out main,
+//     merges the pushed branch via git merge, and pushes main.
+//     Uses github-actions[bot] as the committer. No PR is created —
+//     it's a direct merge to keep things simple and fast.
+//
+// TO UPDATE THIS APP VIA CLAUDE CODE:
+//   Just ask Claude Code to change the VERSION variable (or anything
+//   else in this file). It will commit, push to a claude/* branch,
+//   and the GitHub Action will merge to main automatically. Then
+//   click "Pull Latest" in the web app to deploy.
 //
 // ARCHITECTURE
 // ------------
