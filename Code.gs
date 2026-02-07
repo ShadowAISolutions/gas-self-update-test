@@ -211,7 +211,7 @@
 //
 // =============================================
 
-var VERSION = "2.8";
+var VERSION = "2.9";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -293,7 +293,7 @@ function getAppData() {
 }
 
 function writeVersionToSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
   var sheet = ss.getSheetByName("Live_Sheet");
   if (!sheet) {
     sheet = ss.insertSheet("Live_Sheet");
