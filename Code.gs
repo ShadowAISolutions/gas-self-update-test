@@ -356,8 +356,8 @@
 //
 // =============================================
 
-var VERSION = "1.13";
-var TITLE = "Whatup";
+var VERSION = "1.14";
+var TITLE = "Yessir1";
 
 function doGet() {
   var html = `
