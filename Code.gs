@@ -209,8 +209,8 @@
 //
 // =============================================
 
-var VERSION = "2.6";
-var TITLE = "Welcome";
+var VERSION = "2.7";
+var TITLE = "Whatup";
 
 function doGet() {
   var html = `
