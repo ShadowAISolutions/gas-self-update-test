@@ -1,5 +1,5 @@
 // =============================================
-// VERSION 8.1 — Auto-reload after pull
+// VERSION TESTING AUTO PULL — Auto-reload after pull
 // =============================================
 
 function doGet() {
@@ -20,7 +20,7 @@ function doGet() {
     <body>
       <h1>🟠 GitHub → Apps Script — UPDATED!</h1>
       <div class="version">
-        <strong>Current Version:</strong> 8.1 — Auto-reload after pull 🎉
+        <strong>Current Version:</strong> TESTING AUTO PULL — Auto-reload after pull 🎉
       </div>
       <div class="status">
         <strong>Message:</strong> Hello from the UPDATED code pulled from GitHub!
@@ -67,7 +67,7 @@ function doGet() {
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 8.1";
+         "<br><b>Code version:</b> TESTING AUTO PULL";
 }
 
 function pullFromGitHub() {
