@@ -1,5 +1,5 @@
 // =============================================
-// VERSION TESTING AUTO PULL — Auto-reload after pull
+// VERSION 8.2 — Auto-redirect after pull
 // =============================================
 
 function doGet() {
@@ -20,7 +20,7 @@ function doGet() {
     <body>
       <h1>🟠 GitHub → Apps Script — UPDATED!</h1>
       <div class="version">
-        <strong>Current Version:</strong> TESTING AUTO PULL — Auto-reload after pull 🎉
+        <strong>Current Version:</strong> 8.2 — Auto-redirect after pull 🎉
       </div>
       <div class="status">
         <strong>Message:</strong> Hello from the UPDATED code pulled from GitHub!
@@ -38,8 +38,12 @@ function doGet() {
           google.script.run
             .withSuccessHandler(function(msg) {
               document.getElementById('result').style.background = '#e8f5e9';
-              document.getElementById('result').innerHTML = '✅ ' + msg + '<br><br>🔄 Reloading in 3 seconds...';
-              setTimeout(function() { location.reload(); }, 3000);
+              document.getElementById('result').innerHTML = '✅ ' + msg + '<br><br>🔄 Redirecting in 3 seconds...';
+              setTimeout(function() {
+                google.script.run.withSuccessHandler(function(url) {
+                  window.open(url, '_top');
+                }).getWebAppUrl();
+              }, 3000);
             })
             .withFailureHandler(function(err) {
               document.getElementById('result').style.background = '#ffebee';
@@ -64,10 +68,14 @@ function doGet() {
   return HtmlService.createHtmlOutput(html).setTitle("GitHub Sync Test");
 }
 
+function getWebAppUrl() {
+  return ScriptApp.getService().getUrl();
+}
+
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> TESTING AUTO PULL";
+         "<br><b>Code version:</b> 8.2";
 }
 
 function pullFromGitHub() {
