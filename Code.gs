@@ -53,6 +53,15 @@
 //   and the GitHub Action will merge to main automatically. Then
 //   click "Pull Latest" in the web app to deploy.
 //
+// IMPORTANT — AUTO-INCREMENT VERSION ON EVERY COMMIT:
+//   Whenever you (Claude Code) make ANY change to this file and commit,
+//   you MUST also increment the VERSION variable by 0.1 as part of that
+//   same commit. For example, if VERSION is currently "1.8", change it
+//   to "1.9" before committing. If it's "1.9", change it to "2.0".
+//   This is a hard rule — no commit to Code.gs should ever leave
+//   VERSION unchanged. The version number is how the user tracks that
+//   updates have reached the live web app.
+//
 // ARCHITECTURE
 // ------------
 // The web app uses a "dynamic loader" pattern:
@@ -190,7 +199,7 @@
 //
 // =============================================
 
-var VERSION = "1.8";
+var VERSION = "1.9";
 
 function doGet() {
   var html = `
