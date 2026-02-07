@@ -66,8 +66,18 @@
 // ------------
 // The web app uses a "dynamic loader" pattern:
 //   - doGet() serves a STATIC HTML shell that never changes
-//   - All visible content (version number etc.) is fetched at runtime
-//     via google.script.run calls to server-side functions
+//   - All visible content (version, title, etc.) is fetched at runtime
+//     via a single google.script.run.getAppData() call
+//   - getAppData() returns an object like { version: "2.5", title: "Welcome" }
+//   - The client-side applyData() function loops through the returned keys
+//     and sets the textContent of any HTML element whose id matches the key
+//   - This means adding new dynamic fields only requires:
+//       a. Adding a var at the top (e.g. var SUBTITLE = "...")
+//       b. Including it in getAppData() return value
+//       c. Adding an HTML element with a matching id (e.g. <div id="subtitle">)
+//     No other client-side JS changes are needed
+//   - After a pull, getAppData() is called again on the NEW server code,
+//     so all dynamic values update without a page reload
 //   - This bypasses Google's aggressive server-side HTML caching
 //     which cannot be disabled on Apps Script web apps
 //
@@ -199,8 +209,8 @@
 //
 // =============================================
 
-var VERSION = "2.4";
-var TITLE = "Goodbye Now";
+var VERSION = "2.5";
+var TITLE = "Welcome";
 
 function doGet() {
   var html = `
