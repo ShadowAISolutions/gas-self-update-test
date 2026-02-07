@@ -233,6 +233,27 @@
 // The 10-second polling interval keeps SpreadsheetApp usage reasonable
 // (~8,640 calls/day if the page is open 24/7).
 //
+// TOKEN / QUOTA USAGE DISPLAY
+// ----------------------------
+// The web app shows daily token/quota info to the right of the Live_Sheet
+// title in small gray text, refreshed every 60 seconds via getTokenUsage().
+//
+// Quotas tracked:
+//   - GitHub API: remaining/limit per hour — queried live via
+//     GET https://api.github.com/rate_limit (uses GITHUB_TOKEN if set).
+//     5,000/hr with token, 60/hr without. Each page load uses 1 call
+//     (auto-pull) + 1 call (rate limit check).
+//   - UrlFetchApp: 20,000/day (consumer). NOT queryable — shows limit only.
+//     Used by: pullFromGitHub() (GitHub + Apps Script API calls).
+//   - SpreadsheetApp: ~20,000 reads/day. NOT queryable — shows limit only.
+//     Used by: getLiveB1() every 10s, writeVersionToSheet() on each deploy.
+//   - Apps Script execution time: 90 min/day. NOT queryable — shows limit.
+//     Every google.script.run call consumes execution time.
+//
+// getTokenUsage() is a server function that returns an object with
+// github, urlFetch, spreadsheet, and execTime fields. Only GitHub
+// is live data; the rest are static limit reminders.
+//
 // API ENDPOINTS USED
 // ------------------
 // GitHub:
@@ -301,7 +322,7 @@
 //
 // =============================================
 
-var VERSION = "1.01";
+var VERSION = "1.02";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -320,7 +341,8 @@ function doGet() {
         button:hover { background: #bf360c; }
         #result { margin-top: 8px; padding: 8px 15px; border-radius: 8px; font-size: 13px; }
         #sheet-container { margin-top: 10px; width: 90%; max-width: 600px; }
-        #sheet-container h3 { text-align: center; color: #333; margin: 0 0 4px 0; }
+        #sheet-container h3 { text-align: center; color: #333; margin: 0 0 4px 0; position: relative; }
+        #token-info { position: absolute; right: 0; top: 0; font-size: 10px; font-weight: normal; color: #888; text-align: right; line-height: 1.4; }
         #sheet-container iframe { width: 100%; height: 300px; border: 1px solid #ddd; border-radius: 6px; }
       </style>
     </head>
@@ -331,7 +353,7 @@ function doGet() {
       <div id="result"></div>
 
       <div id="sheet-container">
-        <h3>Live_Sheet</h3>
+        <h3>Live_Sheet <span id="token-info">...</span></h3>
         <div id="live-b1" style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 4px; text-align: center;">...</div>
         <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"></iframe>
       </div>
@@ -361,6 +383,21 @@ function doGet() {
         }
         fetchLiveB1();
         setInterval(fetchLiveB1, 10000);
+
+        // Fetch token/quota usage (on load + every 60s)
+        function fetchTokenUsage() {
+          google.script.run
+            .withSuccessHandler(function(t) {
+              document.getElementById('token-info').innerHTML =
+                'GitHub API: ' + t.github
+                + ' | UrlFetch: ' + t.urlFetch
+                + ' | Sheets: ' + t.spreadsheet
+                + ' | Exec: ' + t.execTime;
+            })
+            .getTokenUsage();
+        }
+        fetchTokenUsage();
+        setInterval(fetchTokenUsage, 60000);
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
@@ -406,6 +443,36 @@ function getTitle() {
 
 function getAppData() {
   return { version: "v" + VERSION, title: TITLE };
+}
+
+function getTokenUsage() {
+  var result = {};
+
+  // GitHub API rate limit (queryable)
+  var GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
+  var headers = {};
+  if (GITHUB_TOKEN) {
+    headers["Authorization"] = "token " + GITHUB_TOKEN;
+  }
+  try {
+    var resp = UrlFetchApp.fetch("https://api.github.com/rate_limit", { headers: headers });
+    var data = JSON.parse(resp.getContentText());
+    var core = data.resources.core;
+    result.github = core.remaining + "/" + core.limit + "/hr";
+  } catch(e) {
+    result.github = "error";
+  }
+
+  // UrlFetchApp: 20,000/day (not queryable — show limit only)
+  result.urlFetch = "20,000/day";
+
+  // SpreadsheetApp: ~20,000/day (not queryable — show limit only)
+  result.spreadsheet = "~20,000/day";
+
+  // Apps Script execution time: 90 min/day (not queryable)
+  result.execTime = "90 min/day";
+
+  return result;
 }
 
 function getLiveB1() {
