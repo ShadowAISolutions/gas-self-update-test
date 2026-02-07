@@ -505,7 +505,7 @@
 //
 // =============================================
 
-var VERSION = "1.23";
+var VERSION = "1.24";
 var TITLE = "welcome";
 
 function doGet() {
@@ -626,17 +626,10 @@ function doGet() {
                 setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
                 return;
               }
-              // New version deployed — write A1, then redirect to load fresh doGet HTML
+              // New version deployed — write A1 (fire-and-forget), then reload
               setTimeout(function() {
-                document.getElementById('result').innerHTML = '⏳ Loading new version...';
-                google.script.run
-                  .withSuccessHandler(function(data) {
-                    applyData(data);
-                    google.script.run
-                      .withSuccessHandler(redirectToSelf)
-                      .writeVersionToSheetA1();
-                  })
-                  .getAppData();
+                google.script.run.writeVersionToSheetA1();
+                window.location.reload();
               }, 2000);
             })
             .withFailureHandler(function(err) {
