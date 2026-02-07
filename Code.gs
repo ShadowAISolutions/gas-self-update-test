@@ -1,5 +1,5 @@
 // =============================================
-// VERSION 8.3 — Auto-redirect after pull
+// VERSION 8.3 — Click to reload after pull
 // =============================================
 
 function doGet() {
@@ -20,7 +20,7 @@ function doGet() {
     <body>
       <h1>🟠 GitHub → Apps Script — UPDATED!</h1>
       <div class="version">
-        <strong>Current Version:</strong> 8.2 — Auto-redirect after pull 🎉
+        <strong>Current Version:</strong> 8.3 — Click to reload after pull 🎉
       </div>
       <div class="status">
         <strong>Message:</strong> Hello from the UPDATED code pulled from GitHub!
@@ -38,12 +38,9 @@ function doGet() {
           google.script.run
             .withSuccessHandler(function(msg) {
               document.getElementById('result').style.background = '#e8f5e9';
-              document.getElementById('result').innerHTML = '✅ ' + msg + '<br><br>🔄 Redirecting in 3 seconds...';
-              setTimeout(function() {
-                google.script.run.withSuccessHandler(function(url) {
-                  window.open(url, '_top');
-                }).getWebAppUrl();
-              }, 3000);
+              google.script.run.withSuccessHandler(function(url) {
+                document.getElementById('result').innerHTML = '✅ ' + msg + '<br><br><a href="' + url + '" target="_top" style="color:#e65100;font-weight:bold;font-size:18px;">👉 Click here to see the new version</a>';
+              }).getWebAppUrl();
             })
             .withFailureHandler(function(err) {
               document.getElementById('result').style.background = '#ffebee';
@@ -69,13 +66,13 @@ function doGet() {
 }
 
 function getWebAppUrl() {
-  return ScriptApp.getService().getUrl();
+  return ScriptApp.getService().getUrl() + "?v=" + new Date().getTime();
 }
 
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 8.2";
+         "<br><b>Code version:</b> 8.3";
 }
 
 function pullFromGitHub() {
