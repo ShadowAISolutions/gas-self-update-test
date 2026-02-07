@@ -567,7 +567,7 @@
 //
 // =============================================
 
-var VERSION = "1.35";
+var VERSION = "1.36";
 var TITLE = "First Try New Session";
 
 function doGet() {
@@ -690,13 +690,16 @@ function doGet() {
                 google.script.run
                   .withSuccessHandler(function(data) {
                     applyData(data);
-                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version + ' — reloading...';
-                    // Navigate iframe to exec URL (iframe self-navigation, not top navigation)
-                    // This is different from reload() which reloads the blank sandbox URL.
-                    // Setting href to the exec URL goes through Google's serving pipeline.
-                    setTimeout(function() {
-                      window.location.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
-                    }, 1000);
+                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version;
+                    // Try top-level navigation (requires user activation in sandbox).
+                    // Using top.location.href targets the correct frame. If the sandbox
+                    // blocks it, it fails silently — no blank page. The dynamic content
+                    // update above already shows the correct new version either way.
+                    try {
+                      window.top.location.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
+                    } catch(e) {
+                      // Sandbox blocked top navigation — page stays functional with dynamic content
+                    }
                   })
                   .getAppData();
               }, 2000);
