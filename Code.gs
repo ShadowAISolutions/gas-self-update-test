@@ -236,7 +236,7 @@
 //
 // =============================================
 
-var VERSION = "3.6";
+var VERSION = "3.7";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -382,12 +382,22 @@ function pullFromGitHub() {
   var FILE_PATH    = "Code.gs";
   var DEPLOYMENT_ID = "AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g";
 
+  // GitHub token stored in Script Properties (not in source code for security)
+  // Set it in Apps Script editor: Project Settings → Script Properties → Add
+  //   Key: GITHUB_TOKEN   Value: your github_pat_... token
+  var GITHUB_TOKEN = PropertiesService.getScriptProperties().getProperty("GITHUB_TOKEN");
+
   var apiUrl = "https://api.github.com/repos/"
     + GITHUB_OWNER + "/" + GITHUB_REPO + "/contents/" + FILE_PATH
     + "?ref=" + GITHUB_BRANCH + "&t=" + new Date().getTime();
 
+  var fetchHeaders = { "Accept": "application/vnd.github.v3.raw" };
+  if (GITHUB_TOKEN) {
+    fetchHeaders["Authorization"] = "token " + GITHUB_TOKEN;
+  }
+
   var response = UrlFetchApp.fetch(apiUrl, {
-    headers: { "Accept": "application/vnd.github.v3.raw" }
+    headers: fetchHeaders
   });
   var newCode = response.getContentText();
 
