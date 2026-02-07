@@ -579,7 +579,7 @@
 //
 // =============================================
 
-var VERSION = "1.58";
+var VERSION = "1.59";
 var TITLE = "Attempt 7";
 
 function doGet() {
@@ -748,7 +748,7 @@ function doPost(e) {
     var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
     var sheet = ss.getSheetByName("Live_Sheet");
     if (!sheet) sheet = ss.insertSheet("Live_Sheet");
-    sheet.getRange("C1").setValue(value);
+    sheet.getRange("C1").setValue(value + " — " + new Date().toLocaleString());
     // Signal to the web app client that a new version is available
     CacheService.getScriptCache().put("pushed_version", value, 3600);
     return ContentService.createTextOutput("OK");
@@ -827,7 +827,7 @@ function writeVersionToSheetA1() {
   if (!sheet) {
     sheet = ss.insertSheet("Live_Sheet");
   }
-  sheet.getRange("A1").setValue("v" + VERSION);
+  sheet.getRange("A1").setValue("v" + VERSION + " — " + new Date().toLocaleString());
 }
 
 function pullAndDeployFromGitHub() {
