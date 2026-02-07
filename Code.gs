@@ -101,10 +101,11 @@
 //   uses template literals (backticks). Without V8, you get
 //   "illegal character" syntax errors.
 //
-// - Three OAuth scopes are required:
+// - Four OAuth scopes are required:
 //     script.projects        → read/write project source code
 //     script.external_request → fetch from GitHub API
 //     script.deployments     → update the live deployment
+//     spreadsheets           → write version to Live_Sheet tab
 //   Missing any scope causes 403 "insufficient authentication scopes".
 //   After adding scopes to appsscript.json, you must re-authorize by
 //   running any function from the editor.
@@ -169,7 +170,8 @@
 //   "oauthScopes": [
 //     "https://www.googleapis.com/auth/script.projects",
 //     "https://www.googleapis.com/auth/script.external_request",
-//     "https://www.googleapis.com/auth/script.deployments"
+//     "https://www.googleapis.com/auth/script.deployments",
+//     "https://www.googleapis.com/auth/spreadsheets"
 //   ]
 // }
 //
@@ -209,7 +211,7 @@
 //
 // =============================================
 
-var VERSION = "2.7";
+var VERSION = "2.8";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -290,6 +292,15 @@ function getAppData() {
   return { version: VERSION, title: TITLE };
 }
 
+function writeVersionToSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Live_Sheet");
+  if (!sheet) {
+    sheet = ss.insertSheet("Live_Sheet");
+  }
+  sheet.getRange("A1").setValue(VERSION);
+}
+
 function pullFromGitHub() {
   var GITHUB_OWNER = "ShadowAISolutions";
   var GITHUB_REPO  = "gas-self-update-test";
@@ -360,6 +371,9 @@ function pullFromGitHub() {
       }
     })
   });
+
+  // Write the new version to the Live_Sheet tab
+  writeVersionToSheet();
 
   return "Updated to v" + pulledVersion + " (deployment " + newVersion + ")";
 }
