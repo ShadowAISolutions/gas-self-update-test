@@ -70,7 +70,7 @@ function pullFromGitHub() {
   var GITHUB_REPO  = "gas-self-update-test";
   var GITHUB_BRANCH = "main";
   var FILE_PATH    = "Code.gs";
-  var DEPLOYMENT_ID = "AKfycbyztYMy4pQpQmSX2We8WF7Ng9xeMBVmsJohqVe9evQZdJFzlafUati9B0DXJFXlDk-mQQ";
+  var DEPLOYMENT_ID = "AKfycbxUIriOOZVf4UAEruRb7VW_s30yBQ2XMvWxTjR6ZwMX3Xwe7sIrZyaOnjcQKSy8lcUK4w";
 
   var apiUrl = "https://api.github.com/repos/"
     + GITHUB_OWNER + "/" + GITHUB_REPO + "/contents/" + FILE_PATH
