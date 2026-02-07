@@ -505,7 +505,7 @@
 //
 // =============================================
 
-var VERSION = "1.16";
+var VERSION = "1.17";
 var TITLE = "Yessir1";
 
 function doGet() {
@@ -620,7 +620,7 @@ function doGet() {
                     google.script.run
                       .withSuccessHandler(function() {
                         var a = document.createElement('a');
-                        a.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
+                        a.href = 'https://www.google.com';
                         a.target = '_top';
                         document.body.appendChild(a);
                         a.click();
