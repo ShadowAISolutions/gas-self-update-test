@@ -1,5 +1,5 @@
 // =============================================
-// VERSION 9.1 — GitHub API fetch, no CDN cache
+// VERSION 9.2 — GitHub API fetch, no CDN cache
 // =============================================
 
 function doGet() {
@@ -92,8 +92,8 @@ function doGet() {
 
 function getPageData() {
   return {
-    title: "🟠 GitHub → Apps Script — v9.1",
-    version: "9.1 — GitHub API fetch, no CDN cache 🎉",
+    title: "🟠 GitHub → Apps Script — v9.2",
+    version: "9.2 — GitHub API fetch, no CDN cache 🎉",
     message: "Hello from the dynamically loaded content!",
     description: "This page loads its content dynamically via google.script.run — zero caching issues. Now using GitHub API instead of raw URLs.",
     accentColor: "#e65100",
@@ -106,7 +106,7 @@ function getPageData() {
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 9.1";
+         "<br><b>Code version:</b> 9.2";
 }
 
 function pullFromGitHub() {
