@@ -77,6 +77,13 @@
 //     Uses github-actions[bot] as the committer. No PR is created —
 //     it's a direct merge to keep things simple and fast.
 //
+// TO START A NEW CLAUDE CODE SESSION:
+//   1. In Claude Code, select: New session
+//   2. Change from "local" to "Claude GitHub Environment 1"
+//   3. Click: select repository
+//   4. Select: gas-self-update-test
+//   5. Type prompt: read the code in the Code.gs file and wait for further instructions
+//
 // TO UPDATE THIS APP VIA CLAUDE CODE:
 //   Just ask Claude Code to change the VERSION variable (or anything
 //   else in this file). It will commit, push to a claude/* branch,
@@ -579,7 +586,7 @@
 //
 // =============================================
 
-var VERSION = "1.61";
+var VERSION = "1.62";
 var TITLE = "Attempt 8";
 
 function doGet() {
