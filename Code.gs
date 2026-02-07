@@ -1,5 +1,5 @@
 // =============================================
-// VERSION 8.2 — Auto-redirect after pull
+// VERSION 8.3 — Auto-redirect after pull
 // =============================================
 
 function doGet() {
