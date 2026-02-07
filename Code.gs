@@ -203,34 +203,26 @@
 // DEPLOYMENT_ID → from Deploy → Manage deployments in the Apps Script editor
 //                 (this is the long AKfycb... string, NOT the web app URL)
 //
-// LIVE SPREADSHEET DATA (CLIENT-SIDE, QUOTA-FREE)
-// ------------------------------------------------
-// The web app displays live data from the linked Google Sheet without
-// using server-side SpreadsheetApp API calls (which count against quotas).
+// LIVE SPREADSHEET DATA DISPLAY
+// ------------------------------
+// The web app displays live data from cell B1 of the Live_Sheet tab,
+// shown above the embedded sheet iframe in the #live-b1 element.
 //
 // How it works:
-//   - The Google Sheet is published to web (File → Share → Publish to web)
-//   - Client-side JS uses the Google Visualization API (gviz/tq endpoint)
-//     to fetch cell values directly from the published sheet
-//   - URL format: https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq
-//       ?tqx=out:json&sheet={TAB_NAME}&range={CELL}&t={CACHE_BUST}
-//   - The code uses JSONP (not fetch) to bypass CORS restrictions in the
-//     Apps Script sandbox: it creates a <script> tag with
-//     tqx=responseHandler:callbackName, and the response calls the named
-//     function directly — no cross-origin issues
-//   - fetchLiveB1() polls cell B1 from Live_Sheet every 5 seconds
+//   - Client-side JS calls google.script.run.getLiveB1() every 10 seconds
+//   - getLiveB1() is a server function that reads cell B1 from Live_Sheet
+//     using SpreadsheetApp.openById() and returns the value as a string
 //   - The value is displayed in the #live-b1 element above the sheet iframe
 //   - The Google Sheet is also embedded as a read-only iframe using:
 //     https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?rm=minimal
 //
-// IMPORTANT: The sheet MUST be published to web for the gviz endpoint to
-// work. If the sheet is not published, the fetch will fail silently.
-// To publish: Google Sheet → File → Share → Publish to web → Publish
+// NOTE: Client-side approaches (gviz/tq via fetch or JSONP) do NOT work
+// because the Apps Script sandbox CSP blocks both cross-origin fetch and
+// dynamically injected external script tags. google.script.run is the
+// only reliable way to get external data into the sandbox.
 //
-// This approach has NO quota limits (unlike SpreadsheetApp API calls)
-// and runs entirely client-side, so it doesn't consume Apps Script
-// execution time. The tradeoff is a ~5 second polling interval and
-// the sheet must be publicly published.
+// The 10-second polling interval keeps SpreadsheetApp usage reasonable
+// (~8,640 calls/day if the page is open 24/7).
 //
 // API ENDPOINTS USED
 // ------------------
@@ -245,12 +237,6 @@
 //   POST /v1/projects/{id}/versions    → create new immutable version
 //   PUT  /v1/projects/{id}/deployments/{id} → point deployment to new version
 //   All require: Authorization: Bearer {ScriptApp.getOAuthToken()}
-//
-// Google Visualization API (client-side, no auth needed):
-//   GET https://docs.google.com/spreadsheets/d/{id}/gviz/tq
-//       ?tqx=out:json&sheet={tab}&range={cell}
-//       Returns JSONP-like response with cell data
-//       Requires the sheet to be published to web
 //
 // appsscript.json (must be set in the Apps Script editor):
 // {
@@ -306,7 +292,7 @@
 //
 // =============================================
 
-var VERSION = "4.4";
+var VERSION = "4.5";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -352,29 +338,16 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Fetch cell B1 from published sheet via Google Visualization API (JSONP, no CORS issues)
+        // Fetch cell B1 from Live_Sheet via google.script.run (every 10s)
         function fetchLiveB1() {
-          var sheetId = '11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI';
-          var cbName = '_gvizCb' + Date.now();
-          window[cbName] = function(resp) {
-            var val = '';
-            try {
-              val = resp.table.rows[0].c[0].v || '';
-            } catch(e) {}
-            document.getElementById('live-b1').textContent = val;
-            delete window[cbName];
-            var s = document.getElementById(cbName);
-            if (s) s.remove();
-          };
-          var s = document.createElement('script');
-          s.id = cbName;
-          s.src = 'https://docs.google.com/spreadsheets/d/' + sheetId
-            + '/gviz/tq?tqx=responseHandler:' + cbName
-            + '&sheet=Live_Sheet&range=B1&t=' + Date.now();
-          document.body.appendChild(s);
+          google.script.run
+            .withSuccessHandler(function(val) {
+              document.getElementById('live-b1').textContent = val;
+            })
+            .getLiveB1();
         }
         fetchLiveB1();
-        setInterval(fetchLiveB1, 5000);
+        setInterval(fetchLiveB1, 10000);
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
@@ -420,6 +393,14 @@ function getTitle() {
 
 function getAppData() {
   return { version: "v" + VERSION, title: TITLE };
+}
+
+function getLiveB1() {
+  var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
+  var sheet = ss.getSheetByName("Live_Sheet");
+  if (!sheet) return "";
+  var val = sheet.getRange("B1").getValue();
+  return val !== null && val !== undefined ? String(val) : "";
 }
 
 function writeVersionToSheet() {
