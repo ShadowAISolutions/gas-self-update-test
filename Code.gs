@@ -262,7 +262,7 @@
 //
 // =============================================
 
-var VERSION = "4.0";
+var VERSION = "4.1";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -291,6 +291,7 @@ function doGet() {
 
       <div id="sheet-container">
         <h3>Live_Sheet</h3>
+        <div id="live-b2" style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">...</div>
         <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"
           style="width:100%; height:300px; border:1px solid #ddd; border-radius:6px;"></iframe>
       </div>
@@ -306,6 +307,27 @@ function doGet() {
         google.script.run
           .withSuccessHandler(applyData)
           .getAppData();
+
+        // Fetch cell B2 from published sheet via Google Visualization API (no quota limits)
+        function fetchLiveB2() {
+          var sheetId = '11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI';
+          var url = 'https://docs.google.com/spreadsheets/d/' + sheetId
+            + '/gviz/tq?tqx=out:json&sheet=Live_Sheet&range=B2&t=' + Date.now();
+          fetch(url)
+            .then(function(r) { return r.text(); })
+            .then(function(text) {
+              // Response is wrapped in google.visualization.Query.setResponse(...)
+              var json = JSON.parse(text.match(/\{.*\}/s)[0]);
+              var val = '';
+              if (json.table && json.table.rows && json.table.rows[0] && json.table.rows[0].c[0]) {
+                val = json.table.rows[0].c[0].v || '';
+              }
+              document.getElementById('live-b2').textContent = val;
+            })
+            .catch(function() {});
+        }
+        fetchLiveB2();
+        setInterval(fetchLiveB2, 5000);
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
