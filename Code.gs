@@ -328,7 +328,7 @@
 //
 // =============================================
 
-var VERSION = "1.06";
+var VERSION = "1.07";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -378,12 +378,16 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Fetch cell B1 once on load (cache-backed, no polling)
-        google.script.run
-          .withSuccessHandler(function(val) {
-            document.getElementById('live-b1').textContent = val;
-          })
-          .getLiveB1();
+        // Fetch cell B1 from cache every 30s (cache is updated by onEditB1 trigger — no SpreadsheetApp quota used)
+        function fetchLiveB1() {
+          google.script.run
+            .withSuccessHandler(function(val) {
+              document.getElementById('live-b1').textContent = val;
+            })
+            .getLiveB1();
+        }
+        fetchLiveB1();
+        setInterval(fetchLiveB1, 30000);
 
         // Auto-pull from GitHub on every page load
         checkForUpdates();
