@@ -24,7 +24,7 @@
 // - Enable Apps Script API in your linked GCP project
 // - Link a GCP project you have Owner access to
 // =============================================
-var VERSION = "1.6";
+var VERSION = "1.2";
 
 function doGet() {
   var html = `
