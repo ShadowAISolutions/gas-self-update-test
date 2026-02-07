@@ -1,7 +1,30 @@
 // =============================================
 // VERSION — change this one number to update everything
 // =============================================
-var VERSION = "1.5";
+// 
+// appsscript.json required for this project:
+// {
+//   "timeZone": "America/New_York",
+//   "runtimeVersion": "V8",
+//   "dependencies": {},
+//   "webapp": {
+//     "executeAs": "USER_DEPLOYING",
+//     "access": "ANYONE_ANONYMOUS"
+//   },
+//   "exceptionLogging": "STACKDRIVER",
+//   "oauthScopes": [
+//     "https://www.googleapis.com/auth/script.projects",
+//     "https://www.googleapis.com/auth/script.external_request",
+//     "https://www.googleapis.com/auth/script.deployments"
+//   ]
+// }
+//
+// Also required:
+// - Enable Apps Script API at https://script.google.com/home/usersettings
+// - Enable Apps Script API in your linked GCP project
+// - Link a GCP project you have Owner access to
+// =============================================
+var VERSION = "1.6";
 
 function doGet() {
   var html = `
