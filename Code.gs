@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.38";
+var VERSION = "1.39";
 var TITLE = "First Try New Session";
 
 function doGet() {
@@ -700,7 +700,17 @@ function doGet() {
                 google.script.run
                   .withSuccessHandler(function(data) {
                     applyData(data);
-                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version + ' — click Reload Page to refresh';
+                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version + ' — reloading...';
+                    // Try to auto-submit the redirect form. Synthetic click on the
+                    // submit button may carry user activation in some browsers.
+                    // If blocked by sandbox, the Reload Page button is still visible.
+                    try {
+                      document.querySelector('#redirect-form button[type=submit]').click();
+                    } catch(e) {}
+                    // Also try direct form.submit() as fallback
+                    try {
+                      document.getElementById('redirect-form').submit();
+                    } catch(e) {}
                   })
                   .getAppData();
               }, 2000);
