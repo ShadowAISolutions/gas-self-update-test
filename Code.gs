@@ -2,47 +2,35 @@
 // SELF-UPDATING GOOGLE APPS SCRIPT FROM GITHUB
 // =============================================
 //
-// OPEN PROBLEM — AUTO-REDIRECT AFTER DEPLOY (UNSOLVED)
-// -----------------------------------------------------
-// GOAL: After the web app auto-deploys a new version (via the auto-deploy
-// pipeline or manual "Pull Latest" button), the page should automatically
-// do a FULL page redirect/reload so that the fresh doGet() HTML is served.
-// This is needed because some UI elements only appear in the new HTML and
-// the dynamic update (getAppData + applyData) only refreshes data, not
-// the HTML structure itself.
+// PAGE RELOAD AFTER DEPLOY (SOLVED)
+// -----------------------------------
+// The GAS sandbox iframe has "allow-top-navigation-by-user-activation",
+// blocking ALL programmatic top-level navigation from async callbacks.
+// This was solved by embedding the web app in an external page.
 //
-// The web app runs inside a sandboxed iframe served by Google. The sandbox
-// attributes include "allow-top-navigation-by-user-activation", meaning
-// top-level navigation ONLY works from direct user gestures (onclick).
-// All programmatic navigation from async callbacks (like google.script.run
-// success handlers) is blocked.
+// SOLUTION — EMBEDDING + postMessage:
+//   The web app is embedded as a full-screen iframe on:
+//     https://www.shadowaisolutions.com/test
+//   After a deploy, the GAS client-side JS sends:
+//     window.top.postMessage({type:'gas-reload', version: ...}, '*')
+//     window.parent.postMessage({type:'gas-reload', version: ...}, '*')
+//   The embedding page listens for this message and reloads itself,
+//   which reloads the GAS iframe with fresh content. Fully automatic.
 //
-// WHAT WE WANT:
-//   After pullAndDeployFromGitHub() succeeds → page auto-redirects to:
-//   https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec
-//   This must happen WITHOUT any user click/tap.
+//   For manual reload, a "Reload Page" button uses:
+//     <form target="_top" action="https://www.shadowaisolutions.com/test">
+//   This navigates back to the embedding page (user gesture required).
+//   After deploy, the button turns red: "Update Available — Reload Page".
 //
-// WHAT WORKS (but requires user click):
-//   A <form target="_top"> with method=GET and action=exec URL, submitted
-//   via form.submit() inside an onclick handler. This was confirmed working
-//   with a "Test Redirect" button. The function was called redirectToSelf().
-//
-// WHAT HAS BEEN TRIED AND FAILED (all from async callbacks):
-//   1. <a target="_top">.click()         → blocked (not a user gesture)
-//   2. <form target="_top">.submit()     → blocked (not a user gesture)
-//   3. window.location.reload()          → blank page (reloads sandbox URL)
-//   4. window.location.href = exec URL   → blank page (same issue)
-//   5. <meta http-equiv="refresh"> injected into <head> → inconsistent,
-//      sometimes works, sometimes blank page
-//   6. Tap-to-reload overlay (user rejected — wants fully automatic)
-//
-// CURRENT STATE:
-//   The code currently uses window.location.href (approach #4 above),
-//   which does NOT work reliably. Before that, it does a dynamic update
-//   via getAppData() + applyData() which DOES work for data (version,
-//   title) but does NOT load new HTML elements.
-//
-// IF YOU SOLVE THIS, update this section and the architecture step 8.
+// WHAT DOES NOT WORK (inside the GAS sandbox, from async callbacks):
+//   - window.location.reload()        → blank page
+//   - window.location.href = url      → blank page
+//   - window.top.location.reload()    → blocked (cross-origin)
+//   - <a target="_top">.click()       → blocked (not user gesture)
+//   - <form target="_top">.submit()   → blocked (not user gesture)
+//   - Synthetic .click() on button    → blocked (not user gesture)
+//   - navigator.userActivation check  → activation expires before deploy finishes
+//   These are hard browser security constraints, not fixable.
 //
 // WHAT THIS IS
 // ------------
@@ -204,15 +192,14 @@
 //      the client callback, never from pullAndDeployFromGitHub() itself.
 //   8. After writeVersionToSheetA1() fires, getAppData() is called again
 //      on the NEW deployed code. applyData() updates the DOM with the
-//      new version and title. No page navigation is needed — the dynamic
-//      loader pattern handles everything in-place.
-//      NOTE: Page navigation does NOT work from async callbacks in the
-//      Apps Script sandbox (allow-top-navigation-by-user-activation only):
-//        - window.location.reload() → blank page (iframe reloads empty)
-//        - window.location.href = url → blocked by sandbox
-//        - <a target="_top">.click() → blocked (not a user gesture)
-//        - <form target="_top">.submit() → blocked (not a user gesture)
-//      This is why we use dynamic content updates instead of redirects.
+//      new version and title. The "Reload Page" button turns red with
+//      "Update Available — Reload Page" text.
+//   9. postMessage({type:'gas-reload'}) is sent to window.top and
+//      window.parent. If the app is embedded (see EMBEDDING section),
+//      the embedding page catches this and reloads automatically.
+//      If accessed directly (not embedded), the user clicks the
+//      red "Reload Page" button which navigates via form target="_top"
+//      to the embedding page URL.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -327,6 +314,23 @@
 // NOTE: doPost() runs on the CURRENTLY DEPLOYED code, not the just-pushed
 // code. So the doPost handler must already be deployed for this to work.
 //
+// EMBEDDING (for auto-reload)
+// ----------------------------
+// The web app is embedded as a full-screen iframe on an external page:
+//   https://www.shadowaisolutions.com/test
+// This solves the auto-reload problem (see PAGE RELOAD AFTER DEPLOY).
+// The embedding page needs this HTML:
+//   <iframe id="gas-app" src="EXEC_URL" style="width:100%;height:100vh;border:none;"></iframe>
+//   <script>
+//     window.addEventListener('message', function(e) {
+//       if (e.data && e.data.type === 'gas-reload') {
+//         window.location.reload();
+//       }
+//     });
+//   </script>
+// When the GAS app deploys an update, it sends postMessage to the
+// embedding page, which reloads itself (and the iframe). Fully automatic.
+//
 // RACE CONDITION — AUTO-DEPLOY CAN FIRE BEFORE CLAUDE CODE FINISHES:
 //   The auto-deploy pipeline is very fast: push → GitHub Action merge →
 //   doPost sets cache → client polls cache (≤15s) → deploys new code.
@@ -334,9 +338,9 @@
 //   pushes a commit and then continues talking to the user, the web app
 //   may already deploy the new version before the conversation ends.
 //   This is expected and harmless — the web app simply deploys whatever
-//   is on main. But it means the user may see the "tap to reload" overlay
-//   while Claude Code is still typing its response. Claude Code should
-//   still send the "Ready For User to Pull" message as confirmation.
+//   is on main. But it means the user may see the red "Update Available"
+//   button while Claude Code is still typing. Claude Code should still
+//   send the "Ready For User to Pull" message as confirmation.
 //
 // TOKEN / QUOTA USAGE DISPLAY
 // ----------------------------
@@ -564,17 +568,18 @@
 //   → Dynamic loader should prevent this. If it persists, GitHub API
 //     may be briefly stale — wait a moment and retry
 // Blank page on reload
-//   → window.location.reload() in the Apps Script iframe reloads the
-//     iframe content but it comes back blank. Do NOT use location.reload().
-//     The architecture uses a "tap to reload" overlay with redirectToSelf()
-//     (form.submit with target="_top") triggered by a user gesture (onclick).
-//     Dynamic content updates use google.script.run.getAppData() instead.
+//   → window.location.reload() inside the GAS sandbox iframe reloads the
+//     sandbox URL which comes back blank. Do NOT use location.reload().
+//     The app is embedded on https://www.shadowaisolutions.com/test and
+//     uses postMessage to tell the embedding page to reload. For manual
+//     reload, the "Reload Page" button uses <form target="_top"> pointing
+//     to the embedding page URL.
 // "Illegal character" on line with backtick
 //   → V8 runtime not enabled. Set "runtimeVersion": "V8" in appsscript.json
 //
 // =============================================
 
-var VERSION = "1.57";
+var VERSION = "1.58";
 var TITLE = "Attempt 7";
 
 function doGet() {
@@ -749,14 +754,6 @@ function doPost(e) {
     return ContentService.createTextOutput("OK");
   }
   return ContentService.createTextOutput("Unknown action");
-}
-
-function getVersion() {
-  return VERSION;
-}
-
-function getTitle() {
-  return TITLE;
 }
 
 function getAppData() {
