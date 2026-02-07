@@ -153,11 +153,19 @@
 //      where VERSION is correct. This pattern should be used for
 //      any post-deployment side effects — always trigger them from
 //      the client callback, never from pullAndDeployFromGitHub() itself.
-//   8. After writeVersionToSheetA1() succeeds, the page redirects to
-//      itself using an <a target="_top"> click trick (the only way to
-//      navigate out of the Apps Script sandboxed iframe — window.location
-//      and location.reload() do NOT work). This ensures the browser
-//      loads the fresh doGet() HTML from the newly deployed code.
+//   8. After writeVersionToSheetA1() fires, a full-screen "tap to reload"
+//      overlay appears. The user taps it, which calls redirectToSelf()
+//      via onclick (a direct user gesture). redirectToSelf() creates a
+//      <form target="_top"> and submits it — the ONLY way to navigate
+//      out of the Apps Script sandboxed iframe.
+//      CRITICAL: Programmatic navigation does NOT work from async callbacks:
+//        - window.location.reload() → blank page (iframe reloads empty)
+//        - window.location.href = url → blocked by sandbox
+//        - <a target="_top">.click() → blocked (not a user gesture)
+//        - <form target="_top">.submit() → blocked (not a user gesture)
+//      ONLY direct user gestures (onclick handlers) can trigger top-level
+//      navigation. This is why we show a clickable overlay instead of
+//      auto-redirecting.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -272,6 +280,17 @@
 // NOTE: doPost() runs on the CURRENTLY DEPLOYED code, not the just-pushed
 // code. So the doPost handler must already be deployed for this to work.
 //
+// RACE CONDITION — AUTO-DEPLOY CAN FIRE BEFORE CLAUDE CODE FINISHES:
+//   The auto-deploy pipeline is very fast: push → GitHub Action merge →
+//   doPost sets cache → client polls cache (≤15s) → deploys new code.
+//   This entire chain can complete in under 30 seconds. If Claude Code
+//   pushes a commit and then continues talking to the user, the web app
+//   may already deploy the new version before the conversation ends.
+//   This is expected and harmless — the web app simply deploys whatever
+//   is on main. But it means the user may see the "tap to reload" overlay
+//   while Claude Code is still typing its response. Claude Code should
+//   still send the "Ready For User to Pull" message as confirmation.
+//
 // TOKEN / QUOTA USAGE DISPLAY
 // ----------------------------
 // The web app shows daily token/quota info to the right of the Live_Sheet
@@ -305,7 +324,7 @@
 // │      └─ 1 google.script.run: getAppData() (post-deploy)       │
 // │      └─ 1 google.script.run: writeVersionToSheetA1()          │
 // │         └─ 1 SpreadsheetApp: write A1                          │
-// │      └─ REDIRECT (triggers another full page load)             │
+// │      └─ OVERLAY shown (user taps → full page reload)           │
 // │    Subtotal per load: 1-5 UrlFetchApp, 1 GitHub API,           │
 // │      0-1 SpreadsheetApp, 2-4 google.script.run                 │
 // │                                                                │
@@ -498,14 +517,17 @@
 //   → Dynamic loader should prevent this. If it persists, GitHub API
 //     may be briefly stale — wait a moment and retry
 // Blank page on reload
-//   → Apps Script iframe blocks location.reload(). This architecture
-//     avoids reloads entirely by re-calling getVersion() dynamically
+//   → window.location.reload() in the Apps Script iframe reloads the
+//     iframe content but it comes back blank. Do NOT use location.reload().
+//     The architecture uses a "tap to reload" overlay with redirectToSelf()
+//     (form.submit with target="_top") triggered by a user gesture (onclick).
+//     Dynamic content updates use google.script.run.getAppData() instead.
 // "Illegal character" on line with backtick
 //   → V8 runtime not enabled. Set "runtimeVersion": "V8" in appsscript.json
 //
 // =============================================
 
-var VERSION = "1.25";
+var VERSION = "1.26";
 var TITLE = "uhuhhh";
 
 function doGet() {
@@ -626,10 +648,18 @@ function doGet() {
                 setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
                 return;
               }
-              // New version deployed — write A1 (fire-and-forget), then reload
+              // New version deployed — write A1 (fire-and-forget), then show tap-to-reload overlay
+              // NOTE: Programmatic navigation (location.reload, form.submit, <a>.click) is
+              // BLOCKED from async callbacks in the Apps Script sandbox. Only direct user
+              // gestures (onclick) can trigger top-level navigation. So we show a clickable
+              // overlay and let the user's tap call redirectToSelf().
               setTimeout(function() {
                 google.script.run.writeVersionToSheetA1();
-                window.location.reload();
+                var overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9999;';
+                overlay.innerHTML = '<div style="text-align:center;"><div style="font-size:48px;">✅</div><div style="font-size:24px;font-weight:bold;color:#2e7d32;">Updated!</div><div style="font-size:16px;color:#555;margin-top:8px;">Tap anywhere to reload</div></div>';
+                overlay.onclick = function() { redirectToSelf(); };
+                document.body.appendChild(overlay);
               }, 2000);
             })
             .withFailureHandler(function(err) {
