@@ -567,8 +567,8 @@
 //
 // =============================================
 
-var VERSION = "1.34";
-var TITLE = "wahoo";
+var VERSION = "1.35";
+var TITLE = "First Try New Session";
 
 function doGet() {
   var html = `
