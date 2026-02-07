@@ -249,10 +249,23 @@
 //   POST param: action=writeC1&value=vX.XX
 //   doPost() reads e.parameter.action and e.parameter.value, writes to C1.
 //
+// doPost() also sets a "pushed_version" cache flag. The client polls
+// getPushedVersion() every 15 seconds. If the pushed version differs from
+// the currently displayed version, it auto-triggers checkForUpdates() —
+// so the web app deploys itself within ~15 seconds of a push, fully
+// automatic with no user interaction.
+//
+// Full auto-deploy flow:
+//   1. Claude Code pushes to claude/* branch
+//   2. GitHub Action merges to main + POSTs to doPost()
+//   3. doPost() writes C1 + sets "pushed_version" in cache
+//   4. Client polls getPushedVersion() every 15s
+//   5. Detects new version → auto-triggers checkForUpdates()
+//   6. pullFromGitHub() deploys the new code
+//   7. App updates dynamically — zero manual clicks
+//
 // NOTE: doPost() runs on the CURRENTLY DEPLOYED code, not the just-pushed
 // code. So the doPost handler must already be deployed for this to work.
-// On the very first push after adding doPost(), the user must pull first
-// to deploy it, then subsequent pushes will auto-write to C1.
 //
 // TOKEN / QUOTA USAGE DISPLAY
 // ----------------------------
@@ -343,7 +356,7 @@
 //
 // =============================================
 
-var VERSION = "1.11";
+var VERSION = "1.12";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -393,7 +406,7 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Fetch cell B1 from cache every 15s (cache is updated by onEditB1 trigger — no SpreadsheetApp quota used)
+        // Fetch cell B1 from cache every 15s (cache is updated by onEditB1 trigger)
         function fetchLiveB1() {
           google.script.run
             .withSuccessHandler(function(val) {
@@ -403,6 +416,25 @@ function doGet() {
         }
         fetchLiveB1();
         setInterval(fetchLiveB1, 15000);
+
+        // Check for new pushed version every 15s (set by doPost via GitHub Action)
+        // If a new version was pushed, auto-pull without user intervention
+        var _autoPulling = false;
+        function checkPushedVersion() {
+          if (_autoPulling) return;
+          google.script.run
+            .withSuccessHandler(function(pushed) {
+              if (!pushed) return;
+              var current = (document.getElementById('version').textContent || '').trim();
+              if (pushed !== current && pushed !== '') {
+                _autoPulling = true;
+                checkForUpdates();
+                setTimeout(function() { _autoPulling = false; }, 30000);
+              }
+            })
+            .getPushedVersion();
+        }
+        setInterval(checkPushedVersion, 15000);
 
         // Auto-pull from GitHub on every page load
         checkForUpdates();
@@ -467,6 +499,8 @@ function doPost(e) {
     var sheet = ss.getSheetByName("Live_Sheet");
     if (!sheet) sheet = ss.insertSheet("Live_Sheet");
     sheet.getRange("C1").setValue(value);
+    // Signal to the web app client that a new version is available
+    CacheService.getScriptCache().put("pushed_version", value, 3600);
     return ContentService.createTextOutput("OK");
   }
   return ContentService.createTextOutput("Unknown action");
@@ -512,6 +546,10 @@ function getTokenUsage() {
   result.execTime = "90 min/day";
 
   return result;
+}
+
+function getPushedVersion() {
+  return CacheService.getScriptCache().get("pushed_version") || "";
 }
 
 function getLiveB1() {
