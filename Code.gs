@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.55";
+var VERSION = "1.56";
 var TITLE = "Attempt 6";
 
 function doGet() {
@@ -603,7 +603,9 @@ function doGet() {
       <h1 id="title" style="font-size: 28px; margin: 0 0 4px 0;">...</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
-      <button id="reload-btn" onclick="try{window.top.postMessage({type:'gas-reload'},'*')}catch(e){}" style="background:#2e7d32;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:14px;margin-top:10px;">🔄 Reload Page</button>
+      <form id="redirect-form" method="GET" action="https://www.shadowaisolutions.com/test" target="_top" style="display:inline;">
+        <button id="reload-btn" type="submit" style="background:#2e7d32;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:14px;margin-top:10px;">🔄 Reload Page</button>
+      </form>
       <div id="result"></div>
 
       <div id="sheet-container">
