@@ -1,5 +1,5 @@
 // =============================================
-// VERSION 9.1 — Dynamic loader, no caching issues
+// VERSION 9.1 — GitHub API fetch, no CDN cache
 // =============================================
 
 function doGet() {
@@ -25,24 +25,22 @@ function doGet() {
       <div id="result"></div>
 
       <script>
+        function renderApp(data) {
+          document.getElementById('loading').style.display = 'none';
+          var app = document.getElementById('app');
+          app.style.display = 'block';
+          app.innerHTML =
+            '<h1 style="color:' + data.accentColor + ';">' + data.title + '</h1>' +
+            '<div class="version" style="background:' + data.versionBg + ';"><strong>Current Version:</strong> ' + data.version + '</div>' +
+            '<div class="status" style="background:' + data.statusBg + ';"><strong>Message:</strong> ' + data.message + '</div>' +
+            '<p>' + data.description + '</p>' +
+            '<button style="background:' + data.accentColor + ';" onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button> ' +
+            '<button style="background:' + data.accentColor + ';" onclick="getInfo()">ℹ️ Show Script Info</button>';
+        }
+
         // On page load, fetch the dynamic content from the server
         google.script.run
-          .withSuccessHandler(function(data) {
-            document.getElementById('loading').style.display = 'none';
-            var app = document.getElementById('app');
-            app.style.display = 'block';
-
-            // Apply dynamic theme
-            document.querySelector('body').style.background = data.bgColor || '#ffffff';
-
-            app.innerHTML =
-              '<h1 style="color:' + data.accentColor + ';">' + data.title + '</h1>' +
-              '<div class="version" style="background:' + data.versionBg + ';"><strong>Current Version:</strong> ' + data.version + '</div>' +
-              '<div class="status" style="background:' + data.statusBg + ';"><strong>Message:</strong> ' + data.message + '</div>' +
-              '<p>' + data.description + '</p>' +
-              '<button style="background:' + data.accentColor + ';" onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button> ' +
-              '<button style="background:' + data.accentColor + ';" onclick="getInfo()">ℹ️ Show Script Info</button>';
-          })
+          .withSuccessHandler(renderApp)
           .withFailureHandler(function(err) {
             document.getElementById('loading').innerHTML = '❌ Failed to load: ' + err.message;
           })
@@ -57,24 +55,12 @@ function doGet() {
               document.getElementById('result').style.background = '#e8f5e9';
               document.getElementById('result').innerHTML = '✅ ' + msg + '<br><br>⏳ Reloading in 3 seconds...';
               setTimeout(function() {
-                // Re-fetch dynamic content without reloading the page
                 document.getElementById('app').style.display = 'none';
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('loading').innerHTML = '⏳ Loading new version...';
                 document.getElementById('result').style.display = 'none';
                 google.script.run
-                  .withSuccessHandler(function(data) {
-                    document.getElementById('loading').style.display = 'none';
-                    var app = document.getElementById('app');
-                    app.style.display = 'block';
-                    app.innerHTML =
-                      '<h1 style="color:' + data.accentColor + ';">' + data.title + '</h1>' +
-                      '<div class="version" style="background:' + data.versionBg + ';"><strong>Current Version:</strong> ' + data.version + '</div>' +
-                      '<div class="status" style="background:' + data.statusBg + ';"><strong>Message:</strong> ' + data.message + '</div>' +
-                      '<p>' + data.description + '</p>' +
-                      '<button style="background:' + data.accentColor + ';" onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button> ' +
-                      '<button style="background:' + data.accentColor + ';" onclick="getInfo()">ℹ️ Show Script Info</button>';
-                  })
+                  .withSuccessHandler(renderApp)
                   .getPageData();
               }, 3000);
             })
@@ -104,16 +90,12 @@ function doGet() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-// =============================================
-// This is the DYNAMIC content — change this on
-// GitHub and it updates without any caching issues
-// =============================================
 function getPageData() {
   return {
-    title: "🟠 GitHub → Apps Script — v9.0",
-    version: "9.0 — Dynamic loader, no caching issues 🎉",
+    title: "🟠 GitHub → Apps Script — v9.1",
+    version: "9.1 — GitHub API fetch, no CDN cache 🎉",
     message: "Hello from the dynamically loaded content!",
-    description: "This page loads its content dynamically via google.script.run — so there are ZERO caching issues.",
+    description: "This page loads its content dynamically via google.script.run — zero caching issues. Now using GitHub API instead of raw URLs.",
     accentColor: "#e65100",
     versionBg: "#fff3e0",
     statusBg: "#e8f5e9",
@@ -124,7 +106,7 @@ function getPageData() {
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 9.0";
+         "<br><b>Code version:</b> 9.1";
 }
 
 function pullFromGitHub() {
@@ -134,10 +116,14 @@ function pullFromGitHub() {
   var FILE_PATH    = "Code.gs";
   var DEPLOYMENT_ID = "AKfycbyztYMy4pQpQmSX2We8WF7Ng9xeMBVmsJohqVe9evQZdJFzlafUati9B0DXJFXlDk-mQQ";
 
-  var rawUrl = "https://raw.githubusercontent.com/"
-    + GITHUB_OWNER + "/" + GITHUB_REPO + "/" + GITHUB_BRANCH + "/" + FILE_PATH;
+  // Use GitHub API instead of raw.githubusercontent.com to avoid CDN caching
+  var apiUrl = "https://api.github.com/repos/"
+    + GITHUB_OWNER + "/" + GITHUB_REPO + "/contents/" + FILE_PATH
+    + "?ref=" + GITHUB_BRANCH + "&t=" + new Date().getTime();
 
-  var response = UrlFetchApp.fetch(rawUrl);
+  var response = UrlFetchApp.fetch(apiUrl, {
+    headers: { "Accept": "application/vnd.github.v3.raw" }
+  });
   var newCode = response.getContentText();
 
   var scriptId = ScriptApp.getScriptId();
