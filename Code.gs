@@ -81,9 +81,9 @@
 //
 // IMPORTANT — AUTO-INCREMENT VERSION ON EVERY COMMIT:
 //   Whenever you (Claude Code) make ANY change to this file and commit,
-//   you MUST also increment the VERSION variable by 0.1 as part of that
-//   same commit. For example, if VERSION is currently "1.8", change it
-//   to "1.9" before committing. If it's "1.9", change it to "2.0".
+//   you MUST also increment the VERSION variable by 0.01 as part of that
+//   same commit. For example, if VERSION is currently "1.01", change it
+//   to "1.02" before committing. If it's "1.99", change it to "2.00".
 //   This is a hard rule — no commit to Code.gs should ever leave
 //   VERSION unchanged. The version number is how the user tracks that
 //   updates have reached the live web app.
@@ -121,7 +121,9 @@
 //   called automatically. This means the app always pulls the latest
 //   code from GitHub on load — if a new version is available, it deploys
 //   and refreshes the dynamic content. If already up to date, it shows
-//   "Already up to date" briefly. The manual button still works too.
+//   "Already up to date" briefly. If the pull fails (e.g. GitHub API
+//   temporarily unavailable), the error IS shown to the user — do NOT
+//   hide errors silently. The manual button still works too.
 //
 // Pull flow when the button is clicked (or on auto-pull):
 //   1. pullFromGitHub() fetches Code.gs from GitHub API
@@ -299,7 +301,7 @@
 //
 // =============================================
 
-var VERSION = "4.9";
+var VERSION = "1.01";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -346,30 +348,8 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Auto-pull from GitHub on every page load (silent on failure)
-        google.script.run
-          .withSuccessHandler(function(msg) {
-            document.getElementById('result').style.background = '#e8f5e9';
-            document.getElementById('result').innerHTML = '✅ ' + msg;
-            if (msg.indexOf('Updated') === 0) {
-              setTimeout(function() {
-                document.getElementById('result').innerHTML = '⏳ Loading new version...';
-                google.script.run
-                  .withSuccessHandler(function(data) {
-                    applyData(data);
-                    document.getElementById('result').innerHTML = '';
-                    google.script.run.writeVersionToSheet();
-                  })
-                  .getAppData();
-              }, 2000);
-            } else {
-              setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
-            }
-          })
-          .withFailureHandler(function() {
-            document.getElementById('result').innerHTML = '';
-          })
-          .pullFromGitHub();
+        // Auto-pull from GitHub on every page load
+        checkForUpdates();
 
         // Fetch cell B1 from Live_Sheet via google.script.run (every 10s)
         function fetchLiveB1() {
