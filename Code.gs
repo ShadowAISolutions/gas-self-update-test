@@ -212,15 +212,32 @@
 // DEPLOYMENT_ID → from Deploy → Manage deployments in the Apps Script editor
 //                 (this is the long AKfycb... string, NOT the web app URL)
 //
-// EMBEDDED SPREADSHEET
-// --------------------
+// EMBEDDED SPREADSHEET + LIVE B1 DISPLAY (CACHE-BACKED)
+// ------------------------------------------------------
 // The Google Sheet is embedded as a read-only iframe using:
 //   https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?rm=minimal
-// No server-side polling is done for cell data — the iframe shows live data.
+//
+// Cell B1 from Live_Sheet is displayed above the iframe in #live-b1.
+// It is fetched ONCE on page load via getLiveB1() — NO polling.
+//
+// getLiveB1() reads from CacheService first (fast, no spreadsheet quota).
+// Only falls back to SpreadsheetApp on cache miss (every 6hrs or first load).
+//
+// An installable onEdit trigger (onEditB1) keeps the cache fresh:
+//   - Fires on every spreadsheet edit
+//   - If the edit is cell B1 on Live_Sheet, writes the new value to
+//     CacheService.getScriptCache() with a 6-hour TTL
+//   - This means subsequent page loads read from cache, not SpreadsheetApp
+//
+// IMPORTANT — INSTALLABLE TRIGGER REQUIRED:
+//   onEditB1 must be installed manually (simple onEdit can't use CacheService):
+//     1. Apps Script editor → Triggers (clock icon) → + Add Trigger
+//     2. Function: onEditB1, Event source: From spreadsheet, Event type: On edit
+//     3. Save and authorize
+//   Without this trigger, getLiveB1() always falls back to SpreadsheetApp.
 //
 // NOTE: Client-side approaches (gviz/tq via fetch or JSONP) do NOT work
-// in the Apps Script sandbox due to CSP restrictions. If live cell data
-// is needed outside the iframe, use google.script.run sparingly.
+// in the Apps Script sandbox due to CSP restrictions.
 //
 // TOKEN / QUOTA USAGE DISPLAY
 // ----------------------------
@@ -311,7 +328,7 @@
 //
 // =============================================
 
-var VERSION = "1.04";
+var VERSION = "1.05";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -343,6 +360,7 @@ function doGet() {
 
       <div id="sheet-container">
         <h3>Live_Sheet <span id="token-info">...</span></h3>
+        <div id="live-b1" style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 4px; text-align: center;">...</div>
         <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"></iframe>
       </div>
 
@@ -357,6 +375,13 @@ function doGet() {
         google.script.run
           .withSuccessHandler(applyData)
           .getAppData();
+
+        // Fetch cell B1 once on load (cache-backed, no polling)
+        google.script.run
+          .withSuccessHandler(function(val) {
+            document.getElementById('live-b1').textContent = val;
+          })
+          .getLiveB1();
 
         // Auto-pull from GitHub on every page load
         checkForUpdates();
@@ -450,6 +475,33 @@ function getTokenUsage() {
   result.execTime = "90 min/day";
 
   return result;
+}
+
+function getLiveB1() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get("live_b1");
+  if (cached !== null) return cached;
+
+  var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
+  var sheet = ss.getSheetByName("Live_Sheet");
+  if (!sheet) return "";
+  var val = sheet.getRange("B1").getValue();
+  var result = val !== null && val !== undefined ? String(val) : "";
+  cache.put("live_b1", result, 21600);
+  return result;
+}
+
+// Installable onEdit trigger. Writes B1 value to CacheService when edited.
+// Install: Apps Script editor → Triggers → + Add Trigger →
+//   Function: onEditB1, Event source: From spreadsheet, Event type: On edit
+function onEditB1(e) {
+  if (!e || !e.range) return;
+  var sheet = e.range.getSheet();
+  if (sheet.getName() !== "Live_Sheet") return;
+  if (e.range.getRow() !== 1 || e.range.getColumn() !== 2) return;
+  var val = e.range.getValue();
+  var result = val !== null && val !== undefined ? String(val) : "";
+  CacheService.getScriptCache().put("live_b1", result, 21600);
 }
 
 function writeVersionToSheet() {
