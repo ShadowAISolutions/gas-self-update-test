@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.51";
+var VERSION = "1.52";
 var TITLE = "Attempt 6";
 
 function doGet() {
@@ -603,9 +603,7 @@ function doGet() {
       <h1 id="title" style="font-size: 28px; margin: 0 0 4px 0;">...</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
-      <form id="redirect-form" method="GET" action="https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec" target="_top" style="display:inline;">
-        <button type="submit" style="background:#2e7d32;margin-top:10px;">🔄 Reload Page</button>
-      </form>
+      <button id="reload-btn" onclick="window.top.location.reload()" style="background:#2e7d32;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:14px;margin-top:10px;">🔄 Reload Page</button>
       <div id="result"></div>
 
       <div id="sheet-container">
@@ -706,7 +704,7 @@ function doGet() {
                   .withSuccessHandler(function(data) {
                     applyData(data);
                     // Highlight the Reload Page button red to signal update is ready
-                    var btn = document.querySelector('#redirect-form button[type=submit]');
+                    var btn = document.getElementById('reload-btn');
                     btn.style.background = '#d32f2f';
                     btn.textContent = '⚠️ Update Available — Reload Page';
                     // Tell parent/top page (if embedded) to reload
