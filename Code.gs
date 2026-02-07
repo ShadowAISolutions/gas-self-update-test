@@ -525,7 +525,7 @@
 //
 // =============================================
 
-var VERSION = "1.31";
+var VERSION = "1.32";
 var TITLE = "wahoo";
 
 function doGet() {
@@ -642,19 +642,19 @@ function doGet() {
                 setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
                 return;
               }
-              // New version deployed — dynamic update first, then full page redirect
+              // New version deployed — dynamic update first, then navigate iframe to exec URL
               setTimeout(function() {
                 google.script.run.writeVersionToSheetA1();
                 google.script.run
                   .withSuccessHandler(function(data) {
                     applyData(data);
                     document.getElementById('result').innerHTML = '✅ Deployed ' + data.version + ' — reloading...';
-                    // Inject meta refresh to trigger a full page redirect
-                    // (declarative redirect that works in sandboxed iframes)
-                    var meta = document.createElement('meta');
-                    meta.httpEquiv = 'refresh';
-                    meta.content = '1;url=https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
-                    document.getElementsByTagName('head')[0].appendChild(meta);
+                    // Navigate iframe to exec URL (iframe self-navigation, not top navigation)
+                    // This is different from reload() which reloads the blank sandbox URL.
+                    // Setting href to the exec URL goes through Google's serving pipeline.
+                    setTimeout(function() {
+                      window.location.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
+                    }, 1000);
                   })
                   .getAppData();
               }, 2000);
