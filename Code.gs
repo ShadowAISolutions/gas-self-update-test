@@ -505,7 +505,7 @@
 //
 // =============================================
 
-var VERSION = "1.18";
+var VERSION = "1.19";
 var TITLE = "Yessir1";
 
 function doGet() {
@@ -603,28 +603,35 @@ function doGet() {
         pollQuotaAndLimits();
         setInterval(pollQuotaAndLimits, 60000);
 
+        function redirectToSelf() {
+          var a = document.createElement('a');
+          a.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
+          a.target = '_top';
+          document.body.appendChild(a);
+          a.click();
+        }
+
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
           document.getElementById('result').innerHTML = '⏳ Pulling...';
           google.script.run
             .withSuccessHandler(function(msg) {
+              var wasUpdated = msg.indexOf('Updated to') === 0;
               document.getElementById('result').style.background = '#e8f5e9';
               document.getElementById('result').innerHTML = '✅ ' + msg;
+              if (!wasUpdated) {
+                // Already up to date — just refresh data, no redirect
+                setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
+                return;
+              }
+              // New version deployed — write A1, then redirect to load fresh doGet HTML
               setTimeout(function() {
                 document.getElementById('result').innerHTML = '⏳ Loading new version...';
                 google.script.run
                   .withSuccessHandler(function(data) {
                     applyData(data);
-                    document.getElementById('result').innerHTML = '';
-                    // Write to spreadsheet using the NEW deployed code, then redirect
                     google.script.run
-                      .withSuccessHandler(function() {
-                        var a = document.createElement('a');
-                        a.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
-                        a.target = '_top';
-                        document.body.appendChild(a);
-                        a.click();
-                      })
+                      .withSuccessHandler(redirectToSelf)
                       .writeVersionToSheetA1();
                   })
                   .getAppData();
