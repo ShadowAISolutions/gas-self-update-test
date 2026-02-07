@@ -505,8 +505,8 @@
 //
 // =============================================
 
-var VERSION = "1.19";
-var TITLE = "Yessir1";
+var VERSION = "1.20";
+var TITLE = "ahaa";
 
 function doGet() {
   var html = `
