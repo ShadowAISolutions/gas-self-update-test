@@ -199,7 +199,8 @@
 //
 // =============================================
 
-var VERSION = "2.1";
+var VERSION = "2.2";
+var TITLE = "Hello There";
 
 function doGet() {
   var html = `
@@ -218,7 +219,7 @@ function doGet() {
       </style>
     </head>
     <body>
-      <h1 style="font-size: 36px; margin-bottom: 10px;">Hello There</h1>
+      <h1 id="title" style="font-size: 36px; margin-bottom: 10px;">...</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
       <div id="result"></div>
@@ -227,6 +228,10 @@ function doGet() {
         google.script.run
           .withSuccessHandler(function(v) { document.getElementById('version').textContent = v; })
           .getVersion();
+
+        google.script.run
+          .withSuccessHandler(function(t) { document.getElementById('title').textContent = t; })
+          .getTitle();
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
@@ -243,6 +248,9 @@ function doGet() {
                     document.getElementById('result').innerHTML = '';
                   })
                   .getVersion();
+                google.script.run
+                  .withSuccessHandler(function(t) { document.getElementById('title').textContent = t; })
+                  .getTitle();
               }, 2000);
             })
             .withFailureHandler(function(err) {
@@ -262,6 +270,10 @@ function doGet() {
 
 function getVersion() {
   return VERSION;
+}
+
+function getTitle() {
+  return TITLE;
 }
 
 function pullFromGitHub() {
