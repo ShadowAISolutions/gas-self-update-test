@@ -88,6 +88,15 @@
 //   VERSION unchanged. The version number is how the user tracks that
 //   updates have reached the live web app.
 //
+// IMPORTANT — SIGNAL WHEN READY FOR USER TO PULL:
+//   When you (Claude Code) are completely done with all changes, have
+//   committed and pushed successfully, your FINAL message to the user
+//   MUST end with exactly:
+//     ✅✅✅ Ready For User to Pull Latest Updates (vX.X)
+//   where X.X is the VERSION you just pushed. This tells the user it's
+//   safe to click "Pull Latest" in the web app. Do NOT send this line
+//   until the push is confirmed successful.
+//
 // ARCHITECTURE
 // ------------
 // The web app uses a "dynamic loader" pattern:
@@ -295,7 +304,7 @@
 //
 // =============================================
 
-var VERSION = "4.2";
+var VERSION = "4.3";
 var TITLE = "Whatup";
 
 function doGet() {
