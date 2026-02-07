@@ -199,7 +199,7 @@
 //
 // =============================================
 
-var VERSION = "2.0";
+var VERSION = "2.1";
 
 function doGet() {
   var html = `
@@ -218,6 +218,7 @@ function doGet() {
       </style>
     </head>
     <body>
+      <h1 style="font-size: 36px; margin-bottom: 10px;">Hello There</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
       <div id="result"></div>
@@ -255,7 +256,7 @@ function doGet() {
     </html>
   `;
   return HtmlService.createHtmlOutput(html)
-    .setTitle("Hello")
+    .setTitle("Claude GitHub")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
