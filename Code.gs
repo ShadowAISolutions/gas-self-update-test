@@ -194,6 +194,33 @@
 // DEPLOYMENT_ID → from Deploy → Manage deployments in the Apps Script editor
 //                 (this is the long AKfycb... string, NOT the web app URL)
 //
+// LIVE SPREADSHEET DATA (CLIENT-SIDE, QUOTA-FREE)
+// ------------------------------------------------
+// The web app displays live data from the linked Google Sheet without
+// using server-side SpreadsheetApp API calls (which count against quotas).
+//
+// How it works:
+//   - The Google Sheet is published to web (File → Share → Publish to web)
+//   - Client-side JS uses the Google Visualization API (gviz/tq endpoint)
+//     to fetch cell values directly from the published sheet
+//   - URL format: https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq
+//       ?tqx=out:json&sheet={TAB_NAME}&range={CELL}&t={CACHE_BUST}
+//   - Response is JSONP-like: google.visualization.Query.setResponse({...})
+//     — the code extracts the JSON via regex: text.match(/\{.*\}/s)[0]
+//   - fetchLiveB2() polls cell B2 from Live_Sheet every 5 seconds
+//   - The value is displayed in the #live-b2 element above the sheet iframe
+//   - The Google Sheet is also embedded as a read-only iframe using:
+//     https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?rm=minimal
+//
+// IMPORTANT: The sheet MUST be published to web for the gviz endpoint to
+// work. If the sheet is not published, the fetch will fail silently.
+// To publish: Google Sheet → File → Share → Publish to web → Publish
+//
+// This approach has NO quota limits (unlike SpreadsheetApp API calls)
+// and runs entirely client-side, so it doesn't consume Apps Script
+// execution time. The tradeoff is a ~5 second polling interval and
+// the sheet must be publicly published.
+//
 // API ENDPOINTS USED
 // ------------------
 // GitHub:
@@ -207,6 +234,12 @@
 //   POST /v1/projects/{id}/versions    → create new immutable version
 //   PUT  /v1/projects/{id}/deployments/{id} → point deployment to new version
 //   All require: Authorization: Bearer {ScriptApp.getOAuthToken()}
+//
+// Google Visualization API (client-side, no auth needed):
+//   GET https://docs.google.com/spreadsheets/d/{id}/gviz/tq
+//       ?tqx=out:json&sheet={tab}&range={cell}
+//       Returns JSONP-like response with cell data
+//       Requires the sheet to be published to web
 //
 // appsscript.json (must be set in the Apps Script editor):
 // {
@@ -262,7 +295,7 @@
 //
 // =============================================
 
-var VERSION = "4.1";
+var VERSION = "4.2";
 var TITLE = "Whatup";
 
 function doGet() {
