@@ -579,7 +579,7 @@
 //
 // =============================================
 
-var VERSION = "1.59";
+var VERSION = "1.60";
 var TITLE = "Attempt 7";
 
 function doGet() {
@@ -707,6 +707,7 @@ function doGet() {
               // New version deployed — update dynamic content and highlight reload button
               setTimeout(function() {
                 google.script.run.writeVersionToSheetA1();
+                google.script.run.writeVersionToSheetC1();
                 google.script.run
                   .withSuccessHandler(function(data) {
                     applyData(data);
@@ -828,6 +829,15 @@ function writeVersionToSheetA1() {
     sheet = ss.insertSheet("Live_Sheet");
   }
   sheet.getRange("A1").setValue("v" + VERSION + " — " + new Date().toLocaleString());
+}
+
+function writeVersionToSheetC1() {
+  var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
+  var sheet = ss.getSheetByName("Live_Sheet");
+  if (!sheet) {
+    sheet = ss.insertSheet("Live_Sheet");
+  }
+  sheet.getRange("C1").setValue("v" + VERSION + " — " + new Date().toLocaleString());
 }
 
 function pullAndDeployFromGitHub() {
