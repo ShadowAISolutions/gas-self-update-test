@@ -221,7 +221,7 @@
 //
 // =============================================
 
-var VERSION = "3.3";
+var VERSION = "3.4";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -271,6 +271,8 @@ function doGet() {
                   .withSuccessHandler(function(data) {
                     applyData(data);
                     document.getElementById('result').innerHTML = '';
+                    // Write to spreadsheet using the NEW deployed code
+                    google.script.run.writeVersionToSheet();
                   })
                   .getAppData();
               }, 2000);
@@ -302,13 +304,13 @@ function getAppData() {
   return { version: "v" + VERSION, title: TITLE };
 }
 
-function writeVersionToSheet(version) {
+function writeVersionToSheet() {
   var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
   var sheet = ss.getSheetByName("Live_Sheet");
   if (!sheet) {
     sheet = ss.insertSheet("Live_Sheet");
   }
-  sheet.getRange("A1").setValue("v" + (version || VERSION));
+  sheet.getRange("A1").setValue("v" + VERSION);
 }
 
 function pullFromGitHub() {
@@ -381,10 +383,6 @@ function pullFromGitHub() {
       }
     })
   });
-
-  // Write the new version to the Live_Sheet tab (pass pulledVersion
-  // because VERSION still holds the old value in this execution context)
-  writeVersionToSheet(pulledVersion);
 
   return "Updated to v" + pulledVersion + " (deployment " + newVersion + ")";
 }
