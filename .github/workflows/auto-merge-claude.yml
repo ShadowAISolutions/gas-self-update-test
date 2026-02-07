@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   auto-merge:
@@ -16,11 +15,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
-      - name: Create and merge PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge claude branch into main
         run: |
           BRANCH="${GITHUB_REF#refs/heads/}"
-          PR_URL=$(gh pr create --title "Auto-merge: ${BRANCH}" --body "Automated merge from Claude Code" --base main --head "$BRANCH" 2>/dev/null || gh pr view "$BRANCH" --json url -q .url)
-          gh pr merge "$PR_URL" --merge --delete-branch
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$BRANCH"
+          git merge "origin/$BRANCH" --no-edit
+          git push origin main
