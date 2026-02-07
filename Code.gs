@@ -299,7 +299,7 @@
 //
 // =============================================
 
-var VERSION = "4.7";
+var VERSION = "4.8";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -317,9 +317,9 @@ function doGet() {
                  border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px; }
         button:hover { background: #bf360c; }
         #result { margin-top: 8px; padding: 8px 15px; border-radius: 8px; font-size: 13px; }
-        #sheet-container { margin-top: 10px; width: 90%; max-width: 600px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        #sheet-container { margin-top: 10px; width: 90%; max-width: 600px; }
         #sheet-container h3 { text-align: center; color: #333; margin: 0 0 4px 0; }
-        #sheet-container iframe { flex: 1; width: 100%; border: 1px solid #ddd; border-radius: 6px; }
+        #sheet-container iframe { width: 100%; height: 300px; border: 1px solid #ddd; border-radius: 6px; }
       </style>
     </head>
     <body>
