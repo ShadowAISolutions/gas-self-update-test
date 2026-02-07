@@ -1,5 +1,5 @@
 // =============================================
-// VERSION 8.4 — Click to reload after pull
+// VERSION 8.5 — Click to reload after pull
 // =============================================
 
 function doGet() {
@@ -20,7 +20,7 @@ function doGet() {
     <body>
       <h1>🟠 GitHub → Apps Script — UPDATED!</h1>
       <div class="version">
-        <strong>Current Version:</strong> 8.4 — Click to reload after pull 🎉
+        <strong>Current Version:</strong> 8.5 — Click to reload after pull 🎉
       </div>
       <div class="status">
         <strong>Message:</strong> Hello from the UPDATED code pulled from GitHub!
@@ -72,7 +72,7 @@ function getWebAppUrl() {
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 8.4";
+         "<br><b>Code version:</b> 8.5";
 }
 
 function pullFromGitHub() {
