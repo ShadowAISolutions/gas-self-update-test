@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.37";
+var VERSION = "1.38";
 var TITLE = "First Try New Session";
 
 function doGet() {
@@ -603,6 +603,9 @@ function doGet() {
       <h1 id="title" style="font-size: 28px; margin: 0 0 4px 0;">...</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
+      <form id="redirect-form" method="GET" action="https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec" target="_top" style="display:inline;">
+        <button type="submit" style="background:#2e7d32;margin-top:10px;">🔄 Reload Page</button>
+      </form>
       <div id="result"></div>
 
       <div id="sheet-container">
@@ -697,16 +700,7 @@ function doGet() {
                 google.script.run
                   .withSuccessHandler(function(data) {
                     applyData(data);
-                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version;
-                    // Try top-level navigation (requires user activation in sandbox).
-                    // Using top.location.href targets the correct frame. If the sandbox
-                    // blocks it, it fails silently — no blank page. The dynamic content
-                    // update above already shows the correct new version either way.
-                    try {
-                      window.top.location.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
-                    } catch(e) {
-                      // Sandbox blocked top navigation — page stays functional with dynamic content
-                    }
+                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version + ' — click Reload Page to refresh';
                   })
                   .getAppData();
               }, 2000);
