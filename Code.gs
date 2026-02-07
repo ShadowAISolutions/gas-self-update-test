@@ -328,7 +328,7 @@
 //
 // =============================================
 
-var VERSION = "1.07";
+var VERSION = "1.08";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -378,7 +378,7 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Fetch cell B1 from cache every 30s (cache is updated by onEditB1 trigger — no SpreadsheetApp quota used)
+        // Fetch cell B1 from cache every 5s (cache is updated by onEditB1 trigger — no SpreadsheetApp quota used)
         function fetchLiveB1() {
           google.script.run
             .withSuccessHandler(function(val) {
@@ -387,7 +387,7 @@ function doGet() {
             .getLiveB1();
         }
         fetchLiveB1();
-        setInterval(fetchLiveB1, 30000);
+        setInterval(fetchLiveB1, 5000);
 
         // Auto-pull from GitHub on every page load
         checkForUpdates();
