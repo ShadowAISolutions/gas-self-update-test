@@ -525,8 +525,8 @@
 //
 // =============================================
 
-var VERSION = "1.29";
-var TITLE = "lets go";
+var VERSION = "1.30";
+var TITLE = "wahoo";
 
 function doGet() {
   var html = `
