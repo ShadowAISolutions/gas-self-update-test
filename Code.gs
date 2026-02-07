@@ -199,7 +199,7 @@
 //
 // =============================================
 
-var VERSION = "1.9";
+var VERSION = "2.0";
 
 function doGet() {
   var html = `
@@ -255,7 +255,7 @@ function doGet() {
     </html>
   `;
   return HtmlService.createHtmlOutput(html)
-    .setTitle("GitHub Sync Test")
+    .setTitle("Hello")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
