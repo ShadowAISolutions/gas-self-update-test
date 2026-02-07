@@ -214,10 +214,12 @@
 //     to fetch cell values directly from the published sheet
 //   - URL format: https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq
 //       ?tqx=out:json&sheet={TAB_NAME}&range={CELL}&t={CACHE_BUST}
-//   - Response is JSONP-like: google.visualization.Query.setResponse({...})
-//     — the code extracts the JSON via regex: text.match(/\{.*\}/s)[0]
-//   - fetchLiveB2() polls cell B2 from Live_Sheet every 5 seconds
-//   - The value is displayed in the #live-b2 element above the sheet iframe
+//   - The code uses JSONP (not fetch) to bypass CORS restrictions in the
+//     Apps Script sandbox: it creates a <script> tag with
+//     tqx=responseHandler:callbackName, and the response calls the named
+//     function directly — no cross-origin issues
+//   - fetchLiveB1() polls cell B1 from Live_Sheet every 5 seconds
+//   - The value is displayed in the #live-b1 element above the sheet iframe
 //   - The Google Sheet is also embedded as a read-only iframe using:
 //     https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit?rm=minimal
 //
@@ -304,7 +306,7 @@
 //
 // =============================================
 
-var VERSION = "4.3";
+var VERSION = "4.4";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -333,7 +335,7 @@ function doGet() {
 
       <div id="sheet-container">
         <h3>Live_Sheet</h3>
-        <div id="live-b2" style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">...</div>
+        <div id="live-b1" style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">...</div>
         <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"
           style="width:100%; height:300px; border:1px solid #ddd; border-radius:6px;"></iframe>
       </div>
@@ -350,26 +352,29 @@ function doGet() {
           .withSuccessHandler(applyData)
           .getAppData();
 
-        // Fetch cell B2 from published sheet via Google Visualization API (no quota limits)
-        function fetchLiveB2() {
+        // Fetch cell B1 from published sheet via Google Visualization API (JSONP, no CORS issues)
+        function fetchLiveB1() {
           var sheetId = '11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI';
-          var url = 'https://docs.google.com/spreadsheets/d/' + sheetId
-            + '/gviz/tq?tqx=out:json&sheet=Live_Sheet&range=B2&t=' + Date.now();
-          fetch(url)
-            .then(function(r) { return r.text(); })
-            .then(function(text) {
-              // Response is wrapped in google.visualization.Query.setResponse(...)
-              var json = JSON.parse(text.match(/\{.*\}/s)[0]);
-              var val = '';
-              if (json.table && json.table.rows && json.table.rows[0] && json.table.rows[0].c[0]) {
-                val = json.table.rows[0].c[0].v || '';
-              }
-              document.getElementById('live-b2').textContent = val;
-            })
-            .catch(function() {});
+          var cbName = '_gvizCb' + Date.now();
+          window[cbName] = function(resp) {
+            var val = '';
+            try {
+              val = resp.table.rows[0].c[0].v || '';
+            } catch(e) {}
+            document.getElementById('live-b1').textContent = val;
+            delete window[cbName];
+            var s = document.getElementById(cbName);
+            if (s) s.remove();
+          };
+          var s = document.createElement('script');
+          s.id = cbName;
+          s.src = 'https://docs.google.com/spreadsheets/d/' + sheetId
+            + '/gviz/tq?tqx=responseHandler:' + cbName
+            + '&sheet=Live_Sheet&range=B1&t=' + Date.now();
+          document.body.appendChild(s);
         }
-        fetchLiveB2();
-        setInterval(fetchLiveB2, 5000);
+        fetchLiveB1();
+        setInterval(fetchLiveB1, 5000);
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
