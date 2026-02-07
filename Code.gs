@@ -328,7 +328,7 @@
 //
 // =============================================
 
-var VERSION = "1.05";
+var VERSION = "1.06";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -346,9 +346,10 @@ function doGet() {
                  border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px; }
         button:hover { background: #bf360c; }
         #result { margin-top: 8px; padding: 8px 15px; border-radius: 8px; font-size: 13px; }
-        #sheet-container { margin-top: 10px; width: 90%; max-width: 600px; }
-        #sheet-container h3 { text-align: center; color: #333; margin: 0 0 4px 0; position: relative; }
-        #token-info { position: absolute; right: 0; top: 0; font-size: 10px; font-weight: normal; color: #888; text-align: right; line-height: 1.4; }
+        #sheet-container { margin-top: 10px; width: 90%; max-width: 600px; position: relative; }
+        #sheet-container h3 { text-align: center; color: #333; margin: 0 0 4px 0; }
+        #token-info { position: absolute; right: -170px; top: 0; font-size: 11px; color: #666; text-align: left; line-height: 1.6; white-space: nowrap; }
+        #token-info div { margin-bottom: 2px; }
         #sheet-container iframe { width: 100%; height: 300px; border: 1px solid #ddd; border-radius: 6px; }
       </style>
     </head>
@@ -359,7 +360,8 @@ function doGet() {
       <div id="result"></div>
 
       <div id="sheet-container">
-        <h3>Live_Sheet <span id="token-info">...</span></h3>
+        <h3>Live_Sheet</h3>
+        <div id="token-info">...</div>
         <div id="live-b1" style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 4px; text-align: center;">...</div>
         <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"></iframe>
       </div>
@@ -391,10 +393,10 @@ function doGet() {
           google.script.run
             .withSuccessHandler(function(t) {
               document.getElementById('token-info').innerHTML =
-                'GitHub API: ' + t.github
-                + ' | UrlFetch: ' + t.urlFetch
-                + ' | Sheets: ' + t.spreadsheet
-                + ' | Exec: ' + t.execTime;
+                '<div>GitHub: ' + t.github + '</div>'
+                + '<div>UrlFetch: ' + t.urlFetch + '</div>'
+                + '<div>Sheets: ' + t.spreadsheet + '</div>'
+                + '<div>Exec: ' + t.execTime + '</div>';
             })
             .getTokenUsage();
         }
