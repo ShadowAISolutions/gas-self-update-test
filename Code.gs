@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.43";
+var VERSION = "1.44";
 var TITLE = "Attempt 2";
 
 function doGet() {
@@ -694,23 +694,16 @@ function doGet() {
                 setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
                 return;
               }
-              // New version deployed — dynamic update first, then try auto-redirect
+              // New version deployed — update dynamic content and highlight reload button
               setTimeout(function() {
                 google.script.run.writeVersionToSheetA1();
                 google.script.run
                   .withSuccessHandler(function(data) {
                     applyData(data);
-                    var execUrl = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
-                    // Check if user activation from the original click is still alive (~5s window)
-                    var hasActivation = navigator.userActivation && navigator.userActivation.isActive;
-                    if (hasActivation) {
-                      // Activation still valid — try form submit (user gesture context)
-                      try { document.getElementById('redirect-form').submit(); return; } catch(e) {}
-                      // Try window.open with _top (goes through popup path with allow-popups)
-                      try { window.open(execUrl, '_top'); return; } catch(e) {}
-                    }
-                    // Activation expired or blocked — prompt user to click Reload Page
-                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version + ' — click Reload Page ☝️';
+                    // Highlight the Reload Page button red to signal update is ready
+                    var btn = document.querySelector('#redirect-form button[type=submit]');
+                    btn.style.background = '#d32f2f';
+                    btn.textContent = '⚠️ Update Available — Reload Page';
                   })
                   .getAppData();
               }, 2000);
