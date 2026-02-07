@@ -239,6 +239,21 @@
 // NOTE: Client-side approaches (gviz/tq via fetch or JSONP) do NOT work
 // in the Apps Script sandbox due to CSP restrictions.
 //
+// GITHUB ACTION → GOOGLE SHEET C1 (VIA doPost)
+// -----------------------------------------------
+// Every time the GitHub Action merges a claude/* branch to main, it also
+// POSTs the new version to the web app's doPost() endpoint, which writes
+// it to cell C1 of Live_Sheet. This happens automatically — no polling.
+//
+// Flow: GitHub Action → curl POST → doPost(e) → writes C1
+//   POST param: action=writeC1&value=vX.XX
+//   doPost() reads e.parameter.action and e.parameter.value, writes to C1.
+//
+// NOTE: doPost() runs on the CURRENTLY DEPLOYED code, not the just-pushed
+// code. So the doPost handler must already be deployed for this to work.
+// On the very first push after adding doPost(), the user must pull first
+// to deploy it, then subsequent pushes will auto-write to C1.
+//
 // TOKEN / QUOTA USAGE DISPLAY
 // ----------------------------
 // The web app shows daily token/quota info to the right of the Live_Sheet
@@ -328,7 +343,7 @@
 //
 // =============================================
 
-var VERSION = "1.09";
+var VERSION = "1.10";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -439,6 +454,22 @@ function doGet() {
   return HtmlService.createHtmlOutput(html)
     .setTitle("Claude GitHub")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// POST endpoint — called by GitHub Action after merging to main.
+// Writes a value to cell C1 of Live_Sheet.
+// Usage: curl -L -X POST "WEB_APP_URL" -d "action=writeC1&value=v1.09"
+function doPost(e) {
+  var action = (e && e.parameter && e.parameter.action) || "";
+  if (action === "writeC1") {
+    var value = (e.parameter.value) || "";
+    var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
+    var sheet = ss.getSheetByName("Live_Sheet");
+    if (!sheet) sheet = ss.insertSheet("Live_Sheet");
+    sheet.getRange("C1").setValue(value);
+    return ContentService.createTextOutput("OK");
+  }
+  return ContentService.createTextOutput("Unknown action");
 }
 
 function getVersion() {

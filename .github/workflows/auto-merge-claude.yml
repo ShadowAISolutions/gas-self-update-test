@@ -25,3 +25,11 @@ jobs:
           git fetch origin "$BRANCH"
           git merge "origin/$BRANCH" --no-edit
           git push origin main
+
+      - name: Write version to Google Sheet C1
+        run: |
+          VERSION=$(grep -oP 'var VERSION\s*=\s*"\K[^"]+' Code.gs || echo "unknown")
+          curl -L -X POST \
+            "https://script.google.com/macros/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec" \
+            -d "action=writeC1&value=v${VERSION}" \
+            --max-time 30 || true
