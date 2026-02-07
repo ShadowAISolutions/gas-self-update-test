@@ -53,6 +53,16 @@
 //   and the GitHub Action will merge to main automatically. Then
 //   click "Pull Latest" in the web app to deploy.
 //
+// IMPORTANT — KEEP THIS OVERVIEW UP TO DATE:
+//   Whenever you (Claude Code) make a STRUCTURAL change to this file
+//   (new functions, changed architecture, new integrations, new config
+//   variables like SPREADSHEET_ID or DEPLOYMENT_ID, changed pull flow,
+//   etc.), you MUST update the relevant section of this overview in
+//   the same commit. Do NOT document simple variable changes (like
+//   bumping VERSION or changing TITLE), but DO document anything that
+//   affects how the system works. This overview is the only context
+//   a future Claude Code session will have — keep it accurate.
+//
 // IMPORTANT — AUTO-INCREMENT VERSION ON EVERY COMMIT:
 //   Whenever you (Claude Code) make ANY change to this file and commit,
 //   you MUST also increment the VERSION variable by 0.1 as part of that
@@ -95,15 +105,20 @@
 //      POST /v1/projects/{scriptId}/versions
 //   5. Updates the web app deployment to point to the new version via
 //      PUT /v1/projects/{scriptId}/deployments/{deploymentId}
-//   6. Writes the pulled version to cell A1 of the "Live_Sheet" tab
-//      in the linked Google Sheet (using SpreadsheetApp.openById).
-//      IMPORTANT: The pulled version string must be passed explicitly
-//      to writeVersionToSheet() because the VERSION variable still
-//      holds the OLD value during this execution — the new code is
-//      deployed but not yet running in this context.
-//   7. Client-side JS waits 2 seconds then re-calls getAppData()
+//   6. Client-side JS waits 2 seconds then re-calls getAppData()
 //      via google.script.run which executes the NEW server-side code,
 //      updating all dynamic values without a page reload
+//   7. After getAppData() succeeds, the client also calls
+//      writeVersionToSheet() which writes "v" + VERSION to cell A1
+//      of the "Live_Sheet" tab in the linked Google Sheet.
+//      IMPORTANT: This is called from the CLIENT-SIDE callback, NOT
+//      from inside pullFromGitHub(). This is critical because
+//      pullFromGitHub() runs as the OLD deployed code (VERSION still
+//      holds the previous value). By calling writeVersionToSheet()
+//      from the post-pull callback, it executes as the NEW code
+//      where VERSION is correct. This pattern should be used for
+//      any post-deployment side effects — always trigger them from
+//      the client callback, never from pullFromGitHub() itself.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -221,7 +236,7 @@
 //
 // =============================================
 
-var VERSION = "3.4";
+var VERSION = "3.5";
 var TITLE = "Whatup";
 
 function doGet() {
