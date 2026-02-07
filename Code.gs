@@ -221,7 +221,7 @@
 //
 // =============================================
 
-var VERSION = "3.2";
+var VERSION = "3.3";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -299,7 +299,7 @@ function getTitle() {
 }
 
 function getAppData() {
-  return { version: VERSION, title: TITLE };
+  return { version: "v" + VERSION, title: TITLE };
 }
 
 function writeVersionToSheet(version) {
@@ -308,7 +308,7 @@ function writeVersionToSheet(version) {
   if (!sheet) {
     sheet = ss.insertSheet("Live_Sheet");
   }
-  sheet.getRange("A1").setValue(version || VERSION);
+  sheet.getRange("A1").setValue("v" + (version || VERSION));
 }
 
 function pullFromGitHub() {
