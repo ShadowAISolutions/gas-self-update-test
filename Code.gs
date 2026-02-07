@@ -211,7 +211,7 @@
 //
 // =============================================
 
-var VERSION = "3.0";
+var VERSION = "3.1";
 var TITLE = "Whatup";
 
 function doGet() {
