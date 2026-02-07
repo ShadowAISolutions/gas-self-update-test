@@ -1,36 +1,53 @@
 // =============================================
-// VERSION 8.5 — Click to reload after pull
+// VERSION 9.0 — Dynamic loader, no caching issues
 // =============================================
 
 function doGet() {
   var html = `
     <html>
     <head>
+      <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+      <meta http-equiv="Pragma" content="no-cache">
+      <meta http-equiv="Expires" content="0">
       <style>
         body { font-family: Arial; max-width: 600px; margin: 40px auto; padding: 20px; }
-        .version { background: #fff3e0; padding: 15px; border-radius: 8px; margin: 10px 0; }
-        .status  { background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 10px 0; }
-        button   { background: #e65100; color: white; border: none; padding: 12px 24px;
+        .version { padding: 15px; border-radius: 8px; margin: 10px 0; }
+        .status  { padding: 15px; border-radius: 8px; margin: 10px 0; }
+        button   { color: white; border: none; padding: 12px 24px;
                    border-radius: 6px; cursor: pointer; font-size: 16px; margin: 5px; }
-        button:hover { background: #bf360c; }
-        h1 { color: #e65100; }
         #result { margin-top: 15px; padding: 15px; border-radius: 8px; display: none; }
+        #loading { text-align: center; padding: 40px; font-size: 18px; }
       </style>
     </head>
     <body>
-      <h1>🟠 GitHub → Apps Script — UPDATED!</h1>
-      <div class="version">
-        <strong>Current Version:</strong> 8.5 — Click to reload after pull 🎉
-      </div>
-      <div class="status">
-        <strong>Message:</strong> Hello from the UPDATED code pulled from GitHub!
-      </div>
-      <p>This page was automatically updated by pulling code from GitHub. Pretty cool right?</p>
-      <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
-      <button onclick="getInfo()">ℹ️ Show Script Info</button>
+      <div id="loading">⏳ Loading latest version...</div>
+      <div id="app" style="display:none;"></div>
       <div id="result"></div>
 
       <script>
+        // On page load, fetch the dynamic content from the server
+        google.script.run
+          .withSuccessHandler(function(data) {
+            document.getElementById('loading').style.display = 'none';
+            var app = document.getElementById('app');
+            app.style.display = 'block';
+
+            // Apply dynamic theme
+            document.querySelector('body').style.background = data.bgColor || '#ffffff';
+
+            app.innerHTML =
+              '<h1 style="color:' + data.accentColor + ';">' + data.title + '</h1>' +
+              '<div class="version" style="background:' + data.versionBg + ';"><strong>Current Version:</strong> ' + data.version + '</div>' +
+              '<div class="status" style="background:' + data.statusBg + ';"><strong>Message:</strong> ' + data.message + '</div>' +
+              '<p>' + data.description + '</p>' +
+              '<button style="background:' + data.accentColor + ';" onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button> ' +
+              '<button style="background:' + data.accentColor + ';" onclick="getInfo()">ℹ️ Show Script Info</button>';
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('loading').innerHTML = '❌ Failed to load: ' + err.message;
+          })
+          .getPageData();
+
         function checkForUpdates() {
           document.getElementById('result').style.display = 'block';
           document.getElementById('result').style.background = '#fff3e0';
@@ -38,9 +55,28 @@ function doGet() {
           google.script.run
             .withSuccessHandler(function(msg) {
               document.getElementById('result').style.background = '#e8f5e9';
-              google.script.run.withSuccessHandler(function(url) {
-                document.getElementById('result').innerHTML = '✅ ' + msg + '<br><br><a href="' + url + '" target="_top" style="color:#e65100;font-weight:bold;font-size:18px;">👉 Click here to see the new version</a>';
-              }).getWebAppUrl();
+              document.getElementById('result').innerHTML = '✅ ' + msg + '<br><br>⏳ Reloading in 3 seconds...';
+              setTimeout(function() {
+                // Re-fetch dynamic content without reloading the page
+                document.getElementById('app').style.display = 'none';
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('loading').innerHTML = '⏳ Loading new version...';
+                document.getElementById('result').style.display = 'none';
+                google.script.run
+                  .withSuccessHandler(function(data) {
+                    document.getElementById('loading').style.display = 'none';
+                    var app = document.getElementById('app');
+                    app.style.display = 'block';
+                    app.innerHTML =
+                      '<h1 style="color:' + data.accentColor + ';">' + data.title + '</h1>' +
+                      '<div class="version" style="background:' + data.versionBg + ';"><strong>Current Version:</strong> ' + data.version + '</div>' +
+                      '<div class="status" style="background:' + data.statusBg + ';"><strong>Message:</strong> ' + data.message + '</div>' +
+                      '<p>' + data.description + '</p>' +
+                      '<button style="background:' + data.accentColor + ';" onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button> ' +
+                      '<button style="background:' + data.accentColor + ';" onclick="getInfo()">ℹ️ Show Script Info</button>';
+                  })
+                  .getPageData();
+              }, 3000);
             })
             .withFailureHandler(function(err) {
               document.getElementById('result').style.background = '#ffebee';
@@ -48,6 +84,7 @@ function doGet() {
             })
             .pullFromGitHub();
         }
+
         function getInfo() {
           document.getElementById('result').style.display = 'block';
           document.getElementById('result').style.background = '#f3e5f5';
@@ -62,17 +99,32 @@ function doGet() {
     </body>
     </html>
   `;
-  return HtmlService.createHtmlOutput(html).setTitle("GitHub Sync Test");
+  return HtmlService.createHtmlOutput(html)
+    .setTitle("GitHub Sync Test")
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function getWebAppUrl() {
-  return ScriptApp.getService().getUrl() + "?v=" + new Date().getTime();
+// =============================================
+// This is the DYNAMIC content — change this on
+// GitHub and it updates without any caching issues
+// =============================================
+function getPageData() {
+  return {
+    title: "🟠 GitHub → Apps Script — v9.0",
+    version: "9.0 — Dynamic loader, no caching issues 🎉",
+    message: "Hello from the dynamically loaded content!",
+    description: "This page loads its content dynamically via google.script.run — so there are ZERO caching issues.",
+    accentColor: "#e65100",
+    versionBg: "#fff3e0",
+    statusBg: "#e8f5e9",
+    bgColor: "#ffffff"
+  };
 }
 
 function getScriptInfo() {
   return "<b>Script ID:</b> " + ScriptApp.getScriptId() +
          "<br><b>Last updated:</b> " + new Date().toLocaleString() +
-         "<br><b>Code version:</b> 8.5";
+         "<br><b>Code version:</b> 9.0";
 }
 
 function pullFromGitHub() {
