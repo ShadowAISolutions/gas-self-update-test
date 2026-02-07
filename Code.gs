@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.50";
+var VERSION = "1.51";
 var TITLE = "Attempt 6";
 
 function doGet() {
@@ -619,6 +619,11 @@ function doGet() {
         <span style="font-weight: bold;">Did it redirect?</span>
         <label style="margin-left: 10px;"><input type="radio" name="redirected" value="yes"> Yes</label>
         <label style="margin-left: 10px;"><input type="radio" name="redirected" value="no"> No</label>
+      </div>
+      <div style="margin-top: 10px; font-size: 14px; color: #333;">
+        <span style="font-weight: bold;">Is this awesome?</span>
+        <label style="margin-left: 10px;"><input type="radio" name="awesome" value="yes"> Yes</label>
+        <label style="margin-left: 10px;"><input type="radio" name="awesome" value="no"> No</label>
       </div>
 
       <script>
