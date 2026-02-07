@@ -153,19 +153,17 @@
 //      where VERSION is correct. This pattern should be used for
 //      any post-deployment side effects — always trigger them from
 //      the client callback, never from pullAndDeployFromGitHub() itself.
-//   8. After writeVersionToSheetA1() fires, a full-screen "tap to reload"
-//      overlay appears. The user taps it, which calls redirectToSelf()
-//      via onclick (a direct user gesture). redirectToSelf() creates a
-//      <form target="_top"> and submits it — the ONLY way to navigate
-//      out of the Apps Script sandboxed iframe.
-//      CRITICAL: Programmatic navigation does NOT work from async callbacks:
+//   8. After writeVersionToSheetA1() fires, getAppData() is called again
+//      on the NEW deployed code. applyData() updates the DOM with the
+//      new version and title. No page navigation is needed — the dynamic
+//      loader pattern handles everything in-place.
+//      NOTE: Page navigation does NOT work from async callbacks in the
+//      Apps Script sandbox (allow-top-navigation-by-user-activation only):
 //        - window.location.reload() → blank page (iframe reloads empty)
 //        - window.location.href = url → blocked by sandbox
 //        - <a target="_top">.click() → blocked (not a user gesture)
 //        - <form target="_top">.submit() → blocked (not a user gesture)
-//      ONLY direct user gestures (onclick handlers) can trigger top-level
-//      navigation. This is why we show a clickable overlay instead of
-//      auto-redirecting.
+//      This is why we use dynamic content updates instead of redirects.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -324,7 +322,7 @@
 // │      └─ 1 google.script.run: getAppData() (post-deploy)       │
 // │      └─ 1 google.script.run: writeVersionToSheetA1()          │
 // │         └─ 1 SpreadsheetApp: write A1                          │
-// │      └─ OVERLAY shown (user taps → full page reload)           │
+// │      └─ 1 google.script.run: getAppData() (refresh display)    │
 // │    Subtotal per load: 1-5 UrlFetchApp, 1 GitHub API,           │
 // │      0-1 SpreadsheetApp, 2-4 google.script.run                 │
 // │                                                                │
@@ -527,7 +525,7 @@
 //
 // =============================================
 
-var VERSION = "1.27";
+var VERSION = "1.28";
 var TITLE = "lets go";
 
 function doGet() {
@@ -556,7 +554,6 @@ function doGet() {
       <h1 id="title" style="font-size: 28px; margin: 0 0 4px 0;">...</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
-      <button onclick="redirectToSelf()" style="background:#333;">🔁 Test Redirect</button>
       <div id="result"></div>
 
       <div id="sheet-container">
@@ -626,15 +623,6 @@ function doGet() {
         pollQuotaAndLimits();
         setInterval(pollQuotaAndLimits, 60000);
 
-        function redirectToSelf() {
-          var form = document.createElement('form');
-          form.method = 'GET';
-          form.action = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
-          form.target = '_top';
-          document.body.appendChild(form);
-          form.submit();
-        }
-
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
           document.getElementById('result').innerHTML = '⏳ Pulling...';
@@ -648,18 +636,18 @@ function doGet() {
                 setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 2000);
                 return;
               }
-              // New version deployed — write A1 (fire-and-forget), then show tap-to-reload overlay
-              // NOTE: Programmatic navigation (location.reload, form.submit, <a>.click) is
-              // BLOCKED from async callbacks in the Apps Script sandbox. Only direct user
-              // gestures (onclick) can trigger top-level navigation. So we show a clickable
-              // overlay and let the user's tap call redirectToSelf().
+              // New version deployed — refresh dynamic content from NEW server code
+              // No page navigation needed: getAppData() runs on the newly deployed
+              // code and returns the updated version/title. applyData() updates the DOM.
               setTimeout(function() {
                 google.script.run.writeVersionToSheetA1();
-                var overlay = document.createElement('div');
-                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9999;';
-                overlay.innerHTML = '<div style="text-align:center;"><div style="font-size:48px;">✅</div><div style="font-size:24px;font-weight:bold;color:#2e7d32;">Updated!</div><div style="font-size:16px;color:#555;margin-top:8px;">Tap anywhere to reload</div></div>';
-                overlay.onclick = function() { redirectToSelf(); };
-                document.body.appendChild(overlay);
+                google.script.run
+                  .withSuccessHandler(function(data) {
+                    applyData(data);
+                    document.getElementById('result').innerHTML = '✅ Deployed ' + data.version;
+                    setTimeout(function() { document.getElementById('result').innerHTML = ''; }, 3000);
+                  })
+                  .getAppData();
               }, 2000);
             })
             .withFailureHandler(function(err) {
