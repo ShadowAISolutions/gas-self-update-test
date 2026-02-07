@@ -505,7 +505,7 @@
 //
 // =============================================
 
-var VERSION = "1.21";
+var VERSION = "1.22";
 var TITLE = "ahaa";
 
 function doGet() {
@@ -605,11 +605,12 @@ function doGet() {
         setInterval(pollQuotaAndLimits, 60000);
 
         function redirectToSelf() {
-          var a = document.createElement('a');
-          a.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
-          a.target = '_top';
-          document.body.appendChild(a);
-          a.click();
+          var form = document.createElement('form');
+          form.method = 'GET';
+          form.action = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
+          form.target = '_top';
+          document.body.appendChild(form);
+          form.submit();
         }
 
         function checkForUpdates() {
