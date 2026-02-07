@@ -586,7 +586,7 @@
 //
 // =============================================
 
-var VERSION = "1.67";
+var VERSION = "1.68";
 var TITLE = "Attempt 10";
 
 function doGet() {
@@ -644,15 +644,8 @@ function doGet() {
       <script>
         function playReadySound() {
           try {
-            var ctx = new (window.AudioContext || window.webkitAudioContext)();
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.frequency.value = 880;
-            gain.gain.value = 0.3;
-            osc.start();
-            osc.stop(ctx.currentTime + 0.15);
+            var audio = new Audio('https://drive.google.com/uc?export=download&id=1bzVp6wpTHdJ4BRX8gbtDN73soWpmq1kN');
+            audio.play().catch(function(e) { console.log('Sound play failed:', e); });
           } catch(e) {}
         }
 
