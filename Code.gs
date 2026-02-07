@@ -135,6 +135,16 @@
 //   After adding scopes to appsscript.json, you must re-authorize by
 //   running any function from the editor.
 //
+// - A GitHub personal access token should be stored in Script Properties
+//   to avoid API rate limits (60/hr unauthenticated → 5000/hr with token).
+//   Set it in the Apps Script editor: Project Settings → Script Properties
+//     Key: GITHUB_TOKEN   Value: your github_pat_... token
+//   The code reads it via PropertiesService.getScriptProperties() and
+//   passes it as an Authorization header. If not set, requests fall back
+//   to unauthenticated (which will hit rate limits quickly).
+//   Generate a fine-grained token at https://github.com/settings/tokens
+//   with "Public repositories" read-only access — no extra permissions needed.
+//
 // - The Apps Script API must be enabled in TWO places:
 //     a. https://script.google.com/home/usersettings (toggle ON)
 //     b. In the linked GCP project: APIs & Services → Library → Apps Script API
@@ -236,7 +246,7 @@
 //
 // =============================================
 
-var VERSION = "3.8";
+var VERSION = "3.9";
 var TITLE = "Whatup";
 
 function doGet() {
