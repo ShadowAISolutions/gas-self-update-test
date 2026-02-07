@@ -199,7 +199,7 @@
 //
 // =============================================
 
-var VERSION = "2.2";
+var VERSION = "2.3";
 var TITLE = "Hello There";
 
 function doGet() {
@@ -225,13 +225,16 @@ function doGet() {
       <div id="result"></div>
 
       <script>
-        google.script.run
-          .withSuccessHandler(function(v) { document.getElementById('version').textContent = v; })
-          .getVersion();
+        function applyData(data) {
+          for (var key in data) {
+            var el = document.getElementById(key);
+            if (el) el.textContent = data[key];
+          }
+        }
 
         google.script.run
-          .withSuccessHandler(function(t) { document.getElementById('title').textContent = t; })
-          .getTitle();
+          .withSuccessHandler(applyData)
+          .getAppData();
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
@@ -243,14 +246,11 @@ function doGet() {
               setTimeout(function() {
                 document.getElementById('result').innerHTML = '⏳ Loading new version...';
                 google.script.run
-                  .withSuccessHandler(function(v) {
-                    document.getElementById('version').textContent = v;
+                  .withSuccessHandler(function(data) {
+                    applyData(data);
                     document.getElementById('result').innerHTML = '';
                   })
-                  .getVersion();
-                google.script.run
-                  .withSuccessHandler(function(t) { document.getElementById('title').textContent = t; })
-                  .getTitle();
+                  .getAppData();
               }, 2000);
             })
             .withFailureHandler(function(err) {
@@ -274,6 +274,10 @@ function getVersion() {
 
 function getTitle() {
   return TITLE;
+}
+
+function getAppData() {
+  return { version: VERSION, title: TITLE };
 }
 
 function pullFromGitHub() {
