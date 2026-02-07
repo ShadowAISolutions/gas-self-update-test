@@ -1,5 +1,5 @@
 // =============================================
-// VERSION 9.2 — GitHub API fetch, no CDN cache
+// VERSION 9.3 — GitHub API fetch, no CDN cache
 // =============================================
 
 function doGet() {
