@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.45";
+var VERSION = "1.46";
 var TITLE = "Attempt 3";
 
 function doGet() {
@@ -704,6 +704,8 @@ function doGet() {
                     var btn = document.querySelector('#redirect-form button[type=submit]');
                     btn.style.background = '#d32f2f';
                     btn.textContent = '⚠️ Update Available — Reload Page';
+                    // Tell parent page (if embedded) to reload
+                    try { window.parent.postMessage({type: 'gas-reload', version: data.version}, '*'); } catch(e) {}
                   })
                   .getAppData();
               }, 2000);
