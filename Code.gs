@@ -121,6 +121,13 @@
 //   understand every function, every integration, every config value,
 //   and every gotcha without needing to ask the user.
 //
+// IMPORTANT — ALWAYS SAY "Standby" FIRST:
+//   Whenever you (Claude Code) receive a new prompt from the user, the
+//   VERY FIRST thing you must output is the word "Standby" (on its own
+//   line). Do this BEFORE you start thinking, planning, or formulating
+//   your response. This lets the user know you received their message
+//   and are not stuck. Every single prompt, no exceptions.
+//
 // IMPORTANT — AUTO-INCREMENT VERSION ON EVERY COMMIT:
 //   Whenever you (Claude Code) make ANY change to this file and commit,
 //   you MUST also increment the VERSION variable by 0.01 as part of that
@@ -567,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.36";
+var VERSION = "1.37";
 var TITLE = "First Try New Session";
 
 function doGet() {
