@@ -153,6 +153,11 @@
 //      where VERSION is correct. This pattern should be used for
 //      any post-deployment side effects — always trigger them from
 //      the client callback, never from pullAndDeployFromGitHub() itself.
+//   8. After writeVersionToSheetA1() succeeds, the page redirects to
+//      itself using an <a target="_top"> click trick (the only way to
+//      navigate out of the Apps Script sandboxed iframe — window.location
+//      and location.reload() do NOT work). This ensures the browser
+//      loads the fresh doGet() HTML from the newly deployed code.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -356,7 +361,7 @@
 //
 // =============================================
 
-var VERSION = "1.14";
+var VERSION = "1.15";
 var TITLE = "Yessir1";
 
 function doGet() {
@@ -467,8 +472,16 @@ function doGet() {
                   .withSuccessHandler(function(data) {
                     applyData(data);
                     document.getElementById('result').innerHTML = '';
-                    // Write to spreadsheet using the NEW deployed code
-                    google.script.run.writeVersionToSheetA1();
+                    // Write to spreadsheet using the NEW deployed code, then redirect
+                    google.script.run
+                      .withSuccessHandler(function() {
+                        var a = document.createElement('a');
+                        a.href = 'https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec';
+                        a.target = '_top';
+                        document.body.appendChild(a);
+                        a.click();
+                      })
+                      .writeVersionToSheetA1();
                   })
                   .getAppData();
               }, 2000);
