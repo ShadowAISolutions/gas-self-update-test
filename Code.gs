@@ -299,7 +299,7 @@
 //
 // =============================================
 
-var VERSION = "4.6";
+var VERSION = "4.7";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -310,27 +310,28 @@ function doGet() {
       <meta http-equiv="Pragma" content="no-cache">
       <meta http-equiv="Expires" content="0">
       <style>
-        body { font-family: Arial; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px 0; }
-        #version { font-size: 120px; font-weight: bold; color: #e65100; }
-        button { background: #e65100; color: white; border: none; padding: 12px 24px;
-                 border-radius: 6px; cursor: pointer; font-size: 16px; margin-top: 20px; }
+        html, body { height: 100%; margin: 0; overflow: hidden; }
+        body { font-family: Arial; display: flex; flex-direction: column; align-items: center; padding: 10px 0; box-sizing: border-box; }
+        #version { font-size: 80px; font-weight: bold; color: #e65100; line-height: 1; }
+        button { background: #e65100; color: white; border: none; padding: 8px 20px;
+                 border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px; }
         button:hover { background: #bf360c; }
-        #result { margin-top: 15px; padding: 15px; border-radius: 8px; font-size: 14px; }
-        #sheet-container { margin-top: 25px; width: 90%; max-width: 600px; }
-        #sheet-container h3 { text-align: center; color: #333; margin-bottom: 8px; }
+        #result { margin-top: 8px; padding: 8px 15px; border-radius: 8px; font-size: 13px; }
+        #sheet-container { margin-top: 10px; width: 90%; max-width: 600px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+        #sheet-container h3 { text-align: center; color: #333; margin: 0 0 4px 0; }
+        #sheet-container iframe { flex: 1; width: 100%; border: 1px solid #ddd; border-radius: 6px; }
       </style>
     </head>
     <body>
-      <h1 id="title" style="font-size: 36px; margin-bottom: 10px;">...</h1>
+      <h1 id="title" style="font-size: 28px; margin: 0 0 4px 0;">...</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
       <div id="result"></div>
 
       <div id="sheet-container">
         <h3>Live_Sheet</h3>
-        <div id="live-b1" style="font-size: 24px; font-weight: bold; color: #333; margin-bottom: 10px; text-align: center;">...</div>
-        <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"
-          style="width:100%; height:300px; border:1px solid #ddd; border-radius:6px;"></iframe>
+        <div id="live-b1" style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 4px; text-align: center;">...</div>
+        <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"></iframe>
       </div>
 
       <script>
