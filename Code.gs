@@ -574,7 +574,7 @@
 //
 // =============================================
 
-var VERSION = "1.48";
+var VERSION = "1.49";
 var TITLE = "Attempt 5";
 
 function doGet() {
@@ -704,7 +704,10 @@ function doGet() {
                     var btn = document.querySelector('#redirect-form button[type=submit]');
                     btn.style.background = '#d32f2f';
                     btn.textContent = '⚠️ Update Available — Reload Page';
-                    // Tell parent page (if embedded) to reload
+                    // Tell parent/top page (if embedded) to reload
+                    // GAS double-iframes: your page > Google wrapper > sandbox (this code)
+                    // So window.parent = Google wrapper, window.top = your page
+                    try { window.top.postMessage({type: 'gas-reload', version: data.version}, '*'); } catch(e) {}
                     try { window.parent.postMessage({type: 'gas-reload', version: data.version}, '*'); } catch(e) {}
                   })
                   .getAppData();
