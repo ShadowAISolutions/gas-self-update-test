@@ -1,7 +1,7 @@
 // =============================================
 // VERSION — change this one number to update everything
 // =============================================
-var VERSION = "1.2";
+var VERSION = "1.3";
 
 function doGet() {
   var html = `
@@ -70,7 +70,7 @@ function pullFromGitHub() {
   var GITHUB_REPO  = "gas-self-update-test";
   var GITHUB_BRANCH = "main";
   var FILE_PATH    = "Code.gs";
-  var DEPLOYMENT_ID = "AKfycbxUIriOOZVf4UAEruRb7VW_s30yBQ2XMvWxTjR6ZwMX3Xwe7sIrZyaOnjcQKSy8lcUK4w";
+  var DEPLOYMENT_ID = "AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g";
 
   var apiUrl = "https://api.github.com/repos/"
     + GITHUB_OWNER + "/" + GITHUB_REPO + "/contents/" + FILE_PATH
