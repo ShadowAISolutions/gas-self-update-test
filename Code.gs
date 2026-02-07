@@ -586,7 +586,7 @@
 //
 // =============================================
 
-var VERSION = "1.64";
+var VERSION = "1.65";
 var TITLE = "Attempt 8";
 
 function doGet() {
@@ -664,7 +664,7 @@ function doGet() {
         }
 
         google.script.run
-          .withSuccessHandler(function(data) { applyData(data); playReadySound(); })
+          .withSuccessHandler(function(data) { applyData(data); })
           .getAppData();
 
         // Poll cell B1 from cache every 15s (cache is updated by onEditWriteB1ToCache trigger)
