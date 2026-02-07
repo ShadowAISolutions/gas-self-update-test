@@ -2,6 +2,48 @@
 // SELF-UPDATING GOOGLE APPS SCRIPT FROM GITHUB
 // =============================================
 //
+// OPEN PROBLEM — AUTO-REDIRECT AFTER DEPLOY (UNSOLVED)
+// -----------------------------------------------------
+// GOAL: After the web app auto-deploys a new version (via the auto-deploy
+// pipeline or manual "Pull Latest" button), the page should automatically
+// do a FULL page redirect/reload so that the fresh doGet() HTML is served.
+// This is needed because some UI elements only appear in the new HTML and
+// the dynamic update (getAppData + applyData) only refreshes data, not
+// the HTML structure itself.
+//
+// The web app runs inside a sandboxed iframe served by Google. The sandbox
+// attributes include "allow-top-navigation-by-user-activation", meaning
+// top-level navigation ONLY works from direct user gestures (onclick).
+// All programmatic navigation from async callbacks (like google.script.run
+// success handlers) is blocked.
+//
+// WHAT WE WANT:
+//   After pullAndDeployFromGitHub() succeeds → page auto-redirects to:
+//   https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec
+//   This must happen WITHOUT any user click/tap.
+//
+// WHAT WORKS (but requires user click):
+//   A <form target="_top"> with method=GET and action=exec URL, submitted
+//   via form.submit() inside an onclick handler. This was confirmed working
+//   with a "Test Redirect" button. The function was called redirectToSelf().
+//
+// WHAT HAS BEEN TRIED AND FAILED (all from async callbacks):
+//   1. <a target="_top">.click()         → blocked (not a user gesture)
+//   2. <form target="_top">.submit()     → blocked (not a user gesture)
+//   3. window.location.reload()          → blank page (reloads sandbox URL)
+//   4. window.location.href = exec URL   → blank page (same issue)
+//   5. <meta http-equiv="refresh"> injected into <head> → inconsistent,
+//      sometimes works, sometimes blank page
+//   6. Tap-to-reload overlay (user rejected — wants fully automatic)
+//
+// CURRENT STATE:
+//   The code currently uses window.location.href (approach #4 above),
+//   which does NOT work reliably. Before that, it does a dynamic update
+//   via getAppData() + applyData() which DOES work for data (version,
+//   title) but does NOT load new HTML elements.
+//
+// IF YOU SOLVE THIS, update this section and the architecture step 8.
+//
 // WHAT THIS IS
 // ------------
 // A Google Apps Script web app that pulls its own source code from
@@ -525,7 +567,7 @@
 //
 // =============================================
 
-var VERSION = "1.33";
+var VERSION = "1.34";
 var TITLE = "wahoo";
 
 function doGet() {
