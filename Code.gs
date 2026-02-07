@@ -525,7 +525,7 @@
 //
 // =============================================
 
-var VERSION = "1.32";
+var VERSION = "1.33";
 var TITLE = "wahoo";
 
 function doGet() {
@@ -536,7 +536,7 @@ function doGet() {
       <meta http-equiv="Pragma" content="no-cache">
       <meta http-equiv="Expires" content="0">
       <style>
-        html, body { height: 100%; margin: 0; overflow: hidden; }
+        html, body { height: 100%; margin: 0; overflow: auto; }
         body { font-family: Arial; display: flex; flex-direction: column; align-items: center; padding: 10px 0; box-sizing: border-box; }
         #version { font-size: 80px; font-weight: bold; color: #e65100; line-height: 1; }
         button { background: #e65100; color: white; border: none; padding: 8px 20px;
