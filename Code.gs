@@ -85,15 +85,25 @@
 //   1. pullFromGitHub() fetches Code.gs from GitHub API
 //      (uses api.github.com, NOT raw.githubusercontent.com which has
 //      a 5-minute CDN cache that causes stale pulls)
-//   2. Overwrites the Apps Script project source via Apps Script API
+//   2. Extracts VERSION from the pulled code using regex and compares
+//      it with the currently running VERSION. If they match, returns
+//      "Already up to date" and skips deployment entirely — this
+//      prevents wasting Apps Script deployment version numbers
+//   3. Overwrites the Apps Script project source via Apps Script API
 //      PUT /v1/projects/{scriptId}/content
-//   3. Creates a new immutable version via
+//   4. Creates a new immutable version via
 //      POST /v1/projects/{scriptId}/versions
-//   4. Updates the web app deployment to point to the new version via
+//   5. Updates the web app deployment to point to the new version via
 //      PUT /v1/projects/{scriptId}/deployments/{deploymentId}
-//   5. Client-side JS waits 2 seconds then re-calls getVersion()
+//   6. Writes the pulled version to cell A1 of the "Live_Sheet" tab
+//      in the linked Google Sheet (using SpreadsheetApp.openById).
+//      IMPORTANT: The pulled version string must be passed explicitly
+//      to writeVersionToSheet() because the VERSION variable still
+//      holds the OLD value during this execution — the new code is
+//      deployed but not yet running in this context.
+//   7. Client-side JS waits 2 seconds then re-calls getAppData()
 //      via google.script.run which executes the NEW server-side code,
-//      updating the displayed version without a page reload
+//      updating all dynamic values without a page reload
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -211,7 +221,7 @@
 //
 // =============================================
 
-var VERSION = "3.1";
+var VERSION = "3.2";
 var TITLE = "Whatup";
 
 function doGet() {
