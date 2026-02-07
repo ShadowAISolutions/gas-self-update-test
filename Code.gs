@@ -236,7 +236,7 @@
 //
 // =============================================
 
-var VERSION = "3.7";
+var VERSION = "3.8";
 var TITLE = "Whatup";
 
 function doGet() {
@@ -255,10 +255,6 @@ function doGet() {
         #result { margin-top: 15px; padding: 15px; border-radius: 8px; font-size: 14px; }
         #sheet-container { margin-top: 25px; width: 90%; max-width: 600px; }
         #sheet-container h3 { text-align: center; color: #333; margin-bottom: 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
-        th { background: #e65100; color: white; }
-        tr:nth-child(even) { background: #f9f9f9; }
       </style>
     </head>
     <body>
@@ -269,7 +265,8 @@ function doGet() {
 
       <div id="sheet-container">
         <h3>Live_Sheet</h3>
-        <div id="sheet-table">Loading...</div>
+        <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"
+          style="width:100%; height:300px; border:1px solid #ddd; border-radius:6px;"></iframe>
       </div>
 
       <script>
@@ -280,34 +277,9 @@ function doGet() {
           }
         }
 
-        function renderSheet(rows) {
-          if (!rows || rows.length === 0) {
-            document.getElementById('sheet-table').innerHTML = '<em>No data</em>';
-            return;
-          }
-          var html = '<table><tr>';
-          for (var c = 0; c < rows[0].length; c++) {
-            html += '<th>' + (rows[0][c] || '') + '</th>';
-          }
-          html += '</tr>';
-          for (var r = 1; r < rows.length; r++) {
-            html += '<tr>';
-            for (var c = 0; c < rows[r].length; c++) {
-              html += '<td>' + (rows[r][c] || '') + '</td>';
-            }
-            html += '</tr>';
-          }
-          html += '</table>';
-          document.getElementById('sheet-table').innerHTML = html;
-        }
-
         google.script.run
           .withSuccessHandler(applyData)
           .getAppData();
-
-        google.script.run
-          .withSuccessHandler(renderSheet)
-          .getSheetData();
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
@@ -322,12 +294,8 @@ function doGet() {
                   .withSuccessHandler(function(data) {
                     applyData(data);
                     document.getElementById('result').innerHTML = '';
-                    // Write to spreadsheet using the NEW deployed code, then refresh table
-                    google.script.run
-                      .withSuccessHandler(function() {
-                        google.script.run.withSuccessHandler(renderSheet).getSheetData();
-                      })
-                      .writeVersionToSheet();
+                    // Write to spreadsheet using the NEW deployed code
+                    google.script.run.writeVersionToSheet();
                   })
                   .getAppData();
               }, 2000);
@@ -357,13 +325,6 @@ function getTitle() {
 
 function getAppData() {
   return { version: "v" + VERSION, title: TITLE };
-}
-
-function getSheetData() {
-  var ss = SpreadsheetApp.openById("11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI");
-  var sheet = ss.getSheetByName("Live_Sheet");
-  if (!sheet) return [];
-  return sheet.getRange(1, 1, 10, 5).getDisplayValues();
 }
 
 function writeVersionToSheet() {
