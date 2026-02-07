@@ -525,7 +525,7 @@
 //
 // =============================================
 
-var VERSION = "1.30";
+var VERSION = "1.31";
 var TITLE = "wahoo";
 
 function doGet() {
@@ -561,6 +561,12 @@ function doGet() {
         <div id="token-info">...</div>
         <div id="live-b1" style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 4px; text-align: center;">...</div>
         <iframe src="https://docs.google.com/spreadsheets/d/11bgXlf8renF2MUwRAs9QXQjhrv3AxJu5b66u0QLTAeI/edit?rm=minimal"></iframe>
+      </div>
+
+      <div style="margin-top: 10px; font-size: 14px; color: #333;">
+        <span style="font-weight: bold;">Did it redirect?</span>
+        <label style="margin-left: 10px;"><input type="radio" name="redirected" value="yes"> Yes</label>
+        <label style="margin-left: 10px;"><input type="radio" name="redirected" value="no"> No</label>
       </div>
 
       <script>
