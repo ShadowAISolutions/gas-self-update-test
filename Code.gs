@@ -146,7 +146,7 @@
 //
 // =============================================
 
-var VERSION = "1.2";
+var VERSION = "1.3";
 
 function doGet() {
   var html = `
