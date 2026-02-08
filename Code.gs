@@ -823,9 +823,50 @@
 // "Illegal character" on line with backtick
 //   → V8 runtime not enabled. Set "runtimeVersion": "V8" in appsscript.json
 //
+// POTENTIAL ADDITIONS (not yet implemented)
+// -----------------------------------------
+//
+// Deployment & Safety:
+//   1. One-click rollback — revert to a previous version if a bad deploy goes out
+//   2. Version diff display — show what changed between deploys
+//   3. Conditional deployment — only deploy if code passes basic validation
+//   4. Multi-environment — separate dev/staging/production GAS projects
+//
+// Monitoring & Logging:
+//   5. Cloud Logging integration — persistent server-side logs via console.log() → Stackdriver
+//   6. Error rate tracking — categorize and count errors by type over time
+//   7. Execution time tracking — log how long each server-side function takes
+//   8. Uptime monitoring — ping the web app URL and track response times
+//
+// Notifications:
+//   9. Web Push notifications — native browser push (works even when tab is closed)
+//  10. Google Chat / Slack integration — team-wide deploy notifications
+//  11. Email alerts — send email on deploy failure or quota warnings
+//
+// UI / UX:
+//  12. Dark mode toggle — CSS variables + localStorage to persist preference
+//  13. System dark mode detection — prefers-color-scheme media query
+//  14. Mobile-responsive layout — CSS media queries for smaller screens
+//
+// Security & Auth:
+//  15. Service account authentication — headless deploys without user session
+//  16. OAuth2 library — connect to third-party APIs beyond GitHub
+//  17. Signature verification on postMessage — verify messages between iframe and parent
+//
+// Development:
+//  18. TypeScript support — type safety via clasp + @types/google-apps-script
+//  19. Unit testing — custom GAS testing library or Jest for frontend
+//  20. Automated backup — periodic ZIP export of the project to Drive
+//
+// Advanced:
+//  21. Google Analytics integration — track page views and user interactions
+//  22. PWA / offline support — service worker on separate host for caching
+//  23. Exponential backoff — retry failed API calls with increasing delays
+//  24. Batch API operations — combine multiple Sheets writes into one call
+//
 // =============================================
 
-var VERSION = "2.17";
+var VERSION = "2.18";
 var TITLE = "Attempt 29";
 
 function doGet() {
