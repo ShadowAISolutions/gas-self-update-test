@@ -216,10 +216,8 @@
 //   Project History > Bulk delete versions
 //
 // What the code DOES do automatically after each deploy:
-//   1. Deletes unused deployments via API (projects.deployments.delete)
-//      — this frees their associated versions for manual deletion
-//   2. Counts total versions and reports "X/200 versions" in the status
-//   3. Shows a warning when versions reach 180+ (approaching limit)
+//   1. Counts total versions and reports "X/200 versions" in the status
+//   2. Shows a warning when versions reach 180+ (approaching limit)
 //
 // When the warning appears, manually clean up in the Apps Script editor:
 //   1. Go to Deploy > Manage Deployments > archive unused deployments
@@ -791,7 +789,7 @@
 //
 // =============================================
 
-var VERSION = "2.09";
+var VERSION = "2.10";
 var TITLE = "Attempt 27";
 
 function doGet() {
@@ -1266,49 +1264,11 @@ function pullAndDeployFromGitHub() {
     })
   });
 
-  // Clean up old deployments and report version count.
-  // NOTE: Apps Script API does NOT support deleting versions (no DELETE endpoint).
-  // Versions can ONLY be deleted via the Apps Script editor web UI:
-  //   Project History > Bulk delete versions
-  // But we CAN delete unused deployments via API, which frees versions for manual deletion.
+  // Count total versions so user knows when to manually clean up.
+  // NOTE: Apps Script API does NOT support deleting versions or deployments automatically.
+  // Versions/deployments must be deleted manually via the Apps Script editor UI.
   var cleanupInfo = "";
   try {
-    // 1. Delete unused deployments (frees versions for manual deletion in UI)
-    var deletedDeploys = 0;
-    var deployPageToken = null;
-    var allDeploys = [];
-    do {
-      var dListUrl = "https://script.googleapis.com/v1/projects/" + scriptId + "/deployments"
-        + (deployPageToken ? "?pageToken=" + deployPageToken : "");
-      var dListResp = UrlFetchApp.fetch(dListUrl, {
-        headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
-      });
-      var dListData = JSON.parse(dListResp.getContentText());
-      if (dListData.deployments) {
-        allDeploys = allDeploys.concat(dListData.deployments);
-      }
-      deployPageToken = dListData.nextPageToken || null;
-    } while (deployPageToken);
-
-    for (var d = 0; d < allDeploys.length; d++) {
-      var dep = allDeploys[d];
-      // Skip the active web app deployment and the HEAD deployment
-      if (dep.deploymentId === DEPLOYMENT_ID) continue;
-      if (dep.deploymentConfig && dep.deploymentConfig.versionNumber === 0) continue;
-      try {
-        var dDelUrl = "https://script.googleapis.com/v1/projects/" + scriptId
-          + "/deployments/" + dep.deploymentId;
-        UrlFetchApp.fetch(dDelUrl, {
-          method: "delete",
-          headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
-        });
-        deletedDeploys++;
-      } catch(dDelErr) {
-        // Skip deployments that can't be deleted
-      }
-    }
-
-    // 2. Count total versions so user knows when to manually clean up
     var totalVersions = 0;
     var vPageToken = null;
     do {
@@ -1325,13 +1285,11 @@ function pullAndDeployFromGitHub() {
     } while (vPageToken);
 
     cleanupInfo = " | " + totalVersions + "/200 versions";
-    if (deletedDeploys > 0) cleanupInfo += ", freed " + deletedDeploys + " old deployment(s)";
-    // Cache the version count so getAppData() can display it persistently
     var versionStatus = totalVersions + "/200 versions";
     if (totalVersions >= 180) versionStatus += " — APPROACHING LIMIT! Manually delete old versions in Apps Script editor: Project History > Bulk delete versions";
     CacheService.getScriptCache().put("version_count_status", versionStatus, 21600);
   } catch(cleanupErr) {
-    cleanupInfo = " | Version cleanup error: " + cleanupErr.message;
+    cleanupInfo = " | Version count error: " + cleanupErr.message;
   }
 
   return "Updated to v" + pulledVersion + " (deployment " + newVersion + ")" + cleanupInfo;
