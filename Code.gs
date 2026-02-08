@@ -413,9 +413,11 @@
 //         } catch(e) { playBeep(); }
 //       }
 //
-//       // After reload: try to play stored sound (works on desktop)
+//       // After reload: try to play stored sound + vibrate (works on desktop + Android)
 //       if (sessionStorage.getItem('gas-pending-sound')) {
 //         sessionStorage.removeItem('gas-pending-sound');
+//         // Vibrate on Android (ignored on desktop/iOS)
+//         if (navigator.vibrate) navigator.vibrate(200);
 //         var soundData = sessionStorage.getItem('gas-sound-data');
 //         if (soundData) {
 //           sessionStorage.removeItem('gas-sound-data');
@@ -789,7 +791,7 @@
 //
 // =============================================
 
-var VERSION = "2.05";
+var VERSION = "2.06";
 var TITLE = "Attempt 25";
 
 function doGet() {
