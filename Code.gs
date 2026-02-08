@@ -224,6 +224,7 @@
 // When the warning appears, manually clean up in the Apps Script editor:
 //   1. Go to Deploy > Manage Deployments > archive unused deployments
 //   2. Go to Project History > Bulk delete versions
+//      Direct link: https://script.google.com/u/0/home/projects/1fLlkGkdZ0AX2ec5jRKJhRSaIYo0BAJUylBi6nqbX96LkNFBf0rGXDfNM/projecthistory
 // A version can only be deleted if no deployment references it.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
@@ -788,7 +789,7 @@
 //
 // =============================================
 
-var VERSION = "2.02";
+var VERSION = "2.03";
 var TITLE = "Attempt 24";
 
 function doGet() {
