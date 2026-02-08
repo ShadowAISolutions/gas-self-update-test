@@ -350,10 +350,26 @@
 //       src="https://drive.google.com/uc?export=download&id=1bzVp6wpTHdJ4BRX8gbtDN73soWpmq1kN">
 //     </audio>
 //     <script>
+//       function playBeep() {
+//         try {
+//           var ctx = new (window.AudioContext || window.webkitAudioContext)();
+//           var osc = ctx.createOscillator();
+//           var gain = ctx.createGain();
+//           osc.connect(gain);
+//           gain.connect(ctx.destination);
+//           osc.frequency.value = 880;
+//           gain.gain.value = 0.3;
+//           osc.start();
+//           osc.stop(ctx.currentTime + 0.15);
+//         } catch(e) {}
+//       }
+//
 //       function playReadySound() {
 //         var audio = document.getElementById('ready-sound');
 //         audio.currentTime = 0;
-//         audio.play().catch(function(e) { console.log('Sound play failed:', e); });
+//         audio.play().catch(function(e) {
+//           playBeep();
+//         });
 //       }
 //
 //       if (sessionStorage.getItem('gas-pending-sound')) {
@@ -380,7 +396,8 @@
 // How it works:
 //   1. GAS app sends postMessage({type:'gas-reload'}) after deploy
 //   2. Embedding page receives message, sets sessionStorage flag, reloads
-//   3. After reload, checks flag → plays Drive MP3 via <audio> element
+//   3. After reload, checks flag → tries Drive MP3 first, falls back to
+//      AudioContext beep if browser blocks autoplay
 //   4. The GAS iframe loads fresh, auto-pulls latest from GitHub
 // The sessionStorage flag survives the reload but not tab close.
 //
@@ -648,7 +665,7 @@
 //
 // =============================================
 
-var VERSION = "1.78";
+var VERSION = "1.79";
 var TITLE = "Attempt 12";
 
 function doGet() {
