@@ -789,7 +789,7 @@
 //
 // =============================================
 
-var VERSION = "2.11";
+var VERSION = "2.12";
 var TITLE = "Attempt 27";
 
 function doGet() {
@@ -973,7 +973,8 @@ function doGet() {
                 '<div>GitHub: ' + t.github + '</div>'
                 + '<div>UrlFetch: ' + t.urlFetch + '</div>'
                 + '<div>Sheets: ' + t.spreadsheet + '</div>'
-                + '<div>Exec: ' + t.execTime + '</div>';
+                + '<div>Exec: ' + t.execTime + '</div>'
+                + '<div>Mail: ' + t.mail + '</div>';
             })
             .fetchGitHubQuotaAndLimits();
         }
@@ -1121,6 +1122,14 @@ function fetchGitHubQuotaAndLimits() {
 
   // Apps Script execution time: 90 min/day (not queryable)
   result.execTime = "90 min/day";
+
+  // MailApp remaining daily quota (requires script.send_mail scope)
+  try {
+    var mailRemaining = MailApp.getRemainingDailyQuota();
+    result.mail = mailRemaining + " remaining/day";
+  } catch(e) {
+    result.mail = "scope error: " + e.message;
+  }
 
   return result;
 }
