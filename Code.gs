@@ -751,7 +751,7 @@
 //
 // =============================================
 
-var VERSION = "1.85";
+var VERSION = "1.86";
 var TITLE = "Attempt 14";
 
 function doGet() {
@@ -765,7 +765,7 @@ function doGet() {
         html, body { height: 100%; margin: 0; overflow: auto; }
         body { font-family: Arial; display: flex; flex-direction: column; align-items: center; padding: 10px 0; box-sizing: border-box; }
         #splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0d47a1; z-index: 9999; transition: opacity 0.3s ease; display: flex; align-items: center; justify-content: center; }
-        #splash img { max-width: 200px; max-height: 200px; }
+        #splash img { max-width: 500px; max-height: 500px; }
         #version { font-size: 80px; font-weight: bold; color: #e65100; line-height: 1; }
         button { background: #e65100; color: white; border: none; padding: 8px 20px;
                  border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px; }
