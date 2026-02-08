@@ -602,7 +602,7 @@
 //
 // =============================================
 
-var VERSION = "1.72";
+var VERSION = "1.73";
 var TITLE = "Attempt 10";
 
 function doGet() {
@@ -649,8 +649,8 @@ function doGet() {
         <label style="margin-left: 10px;"><input type="radio" name="redirected" value="no"> No</label>
       </div>
       <div style="margin-top: 10px;">
-        <button onclick="playReadySound()" style="background:#1565c0;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;">🔊 Test Sound</button>
-        <button onclick="playBeep()" style="background:#6a1b9a;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;margin-left:6px;">🔔 Test Beep</button>
+        <button onclick="playReadySound()" style="background:#1565c0;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;">🔊 Test Sound (Drive)</button>
+        <button onclick="playBeep()" style="background:#6a1b9a;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;margin-left:6px;">🔔 Test Beep (Old)</button>
       </div>
       <div style="margin-top: 10px; font-size: 14px; color: #333;">
         <span style="font-weight: bold;">Is this awesome?</span>
@@ -659,26 +659,33 @@ function doGet() {
       </div>
 
       <script>
-        // Pre-load sound from server on page load (avoids CSP blocking direct Drive URLs)
+        // Pre-load Drive sound from server on page load
         var _soundDataUrl = null;
+        var _soundError = null;
         google.script.run
           .withSuccessHandler(function(dataUrl) { _soundDataUrl = dataUrl; })
+          .withFailureHandler(function(err) { _soundError = err.message; })
           .getSoundBase64();
 
         function playReadySound() {
           var status = document.getElementById('result');
-          if (!_soundDataUrl) {
+          if (_soundError) {
             status.style.background = '#ffebee';
-            status.textContent = 'Sound not loaded yet (_soundDataUrl is null)';
+            status.textContent = 'Server error loading sound: ' + _soundError;
+            return;
+          }
+          if (!_soundDataUrl) {
+            status.style.background = '#fff3e0';
+            status.textContent = 'Sound still loading from server...';
             return;
           }
           status.style.background = '#fff3e0';
-          status.textContent = 'Playing... dataUrl length: ' + _soundDataUrl.length + ' | starts: ' + _soundDataUrl.substring(0, 30);
+          status.textContent = 'Playing... (length: ' + _soundDataUrl.length + ')';
           try {
             var audio = new Audio(_soundDataUrl);
             audio.play().then(function() {
               status.style.background = '#e8f5e9';
-              status.textContent = 'Play started OK (length: ' + _soundDataUrl.length + ')';
+              status.textContent = 'Drive sound playing (length: ' + _soundDataUrl.length + ')';
             }).catch(function(e) {
               status.style.background = '#ffebee';
               status.textContent = 'Play rejected: ' + e.message;
@@ -689,46 +696,19 @@ function doGet() {
           }
         }
 
+        // Exact v1.67 beep code (AudioContext) — restored unchanged
         function playBeep() {
-          var status = document.getElementById('result');
           try {
-            // Generate a tiny WAV beep as inline data URI (AudioContext is muted in GAS sandbox)
-            var sr = 8000, dur = 0.15, freq = 880, vol = 0.3;
-            var n = Math.floor(sr * dur);
-            var buf = new ArrayBuffer(44 + n * 2);
-            var v = new DataView(buf);
-            v.setUint32(0, 0x52494646, false);
-            v.setUint32(4, 36 + n * 2, true);
-            v.setUint32(8, 0x57415645, false);
-            v.setUint32(12, 0x666D7420, false);
-            v.setUint32(16, 16, true);
-            v.setUint16(20, 1, true);
-            v.setUint16(22, 1, true);
-            v.setUint32(24, sr, true);
-            v.setUint32(28, sr * 2, true);
-            v.setUint16(32, 2, true);
-            v.setUint16(34, 16, true);
-            v.setUint32(36, 0x64617461, false);
-            v.setUint32(40, n * 2, true);
-            for (var i = 0; i < n; i++) {
-              v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * freq * i / sr) * vol * 32767, true);
-            }
-            var bytes = new Uint8Array(buf);
-            var bin = '';
-            for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-            var dataUri = 'data:audio/wav;base64,' + btoa(bin);
-            var audio = new Audio(dataUri);
-            audio.play().then(function() {
-              status.style.background = '#e8f5e9';
-              status.textContent = 'WAV beep play started OK';
-            }).catch(function(e) {
-              status.style.background = '#ffebee';
-              status.textContent = 'WAV beep rejected: ' + e.message;
-            });
-          } catch(e) {
-            status.style.background = '#ffebee';
-            status.textContent = 'Beep error: ' + e.message;
-          }
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.value = 880;
+            gain.gain.value = 0.3;
+            osc.start();
+            osc.stop(ctx.currentTime + 0.15);
+          } catch(e) {}
         }
 
         function applyData(data) {
