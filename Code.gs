@@ -791,7 +791,7 @@
 //
 // =============================================
 
-var VERSION = "2.06";
+var VERSION = "2.07";
 var TITLE = "Attempt 25";
 
 function doGet() {
@@ -844,6 +844,7 @@ function doGet() {
       <div style="margin-top: 10px;">
         <button onclick="playReadySound()" style="background:#1565c0;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;">🔊 Test Sound (Drive)</button>
         <button onclick="playBeep()" style="background:#6a1b9a;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;margin-left:6px;">🔔 Test Beep (Old)</button>
+        <button onclick="testVibrate()" style="background:#2e7d32;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;margin-left:6px;">📳 Test Vibrate</button>
       </div>
       <div style="margin-top: 10px; font-size: 14px; color: #333;">
         <span style="font-weight: bold;">Is this awesome?</span>
@@ -902,6 +903,18 @@ function doGet() {
             osc.start();
             osc.stop(ctx.currentTime + 0.15);
           } catch(e) {}
+        }
+
+        function testVibrate() {
+          var status = document.getElementById('result');
+          if (navigator.vibrate) {
+            navigator.vibrate(200);
+            status.style.background = '#e8f5e9';
+            status.textContent = 'Vibrate triggered (200ms)';
+          } else {
+            status.style.background = '#ffebee';
+            status.textContent = 'navigator.vibrate not supported on this device/browser';
+          }
         }
 
         function applyData(data) {
