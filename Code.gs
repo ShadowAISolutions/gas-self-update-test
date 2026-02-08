@@ -535,7 +535,15 @@
 // The web app shows daily token/quota info to the right of the Live_Sheet
 // title in small gray text, refreshed every 60 seconds via fetchGitHubQuotaAndLimits().
 // fetchGitHubQuotaAndLimits() returns an object with github, urlFetch,
-// spreadsheet, and execTime fields. Only GitHub is live; rest are static.
+// spreadsheet, execTime, and mail fields.
+// The display is split into two sections:
+//   "Live Quotas" — values queried at runtime:
+//     - GitHub: remaining/limit per hour (via api.github.com/rate_limit)
+//     - Mail: remaining emails per day (via MailApp.getRemainingDailyQuota())
+//   "Estimates" — static documented limits (not queryable):
+//     - UrlFetch: 20,000/day
+//     - Sheets: ~20,000/day
+//     - Exec: 90 min/day
 //
 // SOUND PLAYBACK — TWO CONTEXTS
 // ----------------------------------------
@@ -595,6 +603,7 @@
 // │    └─ 1 google.script.run → fetchGitHubQuotaAndLimits()       │
 // │      └─ 1 UrlFetchApp: GitHub API GET /rate_limit              │
 // │      └─ 1 GitHub API call (counts toward rate limit)           │
+// │      └─ 1 MailApp.getRemainingDailyQuota()                     │
 // │                                                                │
 // │ 5. getSoundBase64() — pre-load sound on page load              │
 // │    └─ 1 google.script.run → getSoundBase64()                   │
@@ -630,6 +639,7 @@
 // │    └─ 1 google.script.run (execution time ~100ms)              │
 // │    └─ 1 UrlFetchApp: GitHub API GET /rate_limit                │
 // │    └─ 1 GitHub API call                                        │
+// │    └─ 1 MailApp.getRemainingDailyQuota()                       │
 // │                                                                │
 // │ Per day: 1,440 google.script.run, 1,440 UrlFetchApp,           │
 // │          1,440 GitHub API calls                                 │
@@ -791,7 +801,7 @@
 //
 // =============================================
 
-var VERSION = "2.14";
+var VERSION = "2.15";
 var TITLE = "Attempt 28";
 
 function doGet() {
