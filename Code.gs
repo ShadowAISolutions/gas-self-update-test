@@ -866,7 +866,7 @@
 //
 // =============================================
 
-var VERSION = "01.02";
+var VERSION = "01.03";
 var TITLE = "Attempt 40";
 
 function doGet() {
@@ -925,6 +925,20 @@ function doGet() {
         <span style="font-weight: bold;">Is this awesome?</span>
         <label style="margin-left: 10px;"><input type="radio" name="awesome" value="yes"> Yes</label>
         <label style="margin-left: 10px;"><input type="radio" name="awesome" value="no"> No</label>
+      </div>
+
+      <div style="margin-top: 30px; text-align: center;">
+        <svg width="200" height="260" viewBox="0 0 200 260">
+          <!-- trunk -->
+          <rect x="85" y="170" width="30" height="70" rx="4" fill="#8B5E3C"/>
+          <rect x="88" y="170" width="6" height="70" rx="2" fill="#A0714F" opacity="0.5"/>
+          <!-- tree layers (bottom to top) -->
+          <polygon points="100,10 30,100 170,100" fill="#2E7D32"/>
+          <polygon points="100,50 20,150 180,150" fill="#388E3C"/>
+          <polygon points="100,90 10,190 190,190" fill="#43A047"/>
+          <!-- ground -->
+          <ellipse cx="100" cy="242" rx="70" ry="10" fill="#5D4037" opacity="0.3"/>
+        </svg>
       </div>
 
       <script>
