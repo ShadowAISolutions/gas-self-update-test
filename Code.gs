@@ -346,9 +346,26 @@
 //       allow="*">
 //     </iframe>
 //     <script>
+//       // Pre-unlock AudioContext on first user interaction (needed for mobile)
+//       var _audioCtx = null;
+//       function unlockAudio() {
+//         if (!_audioCtx) {
+//           _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+//           // Play a silent buffer to fully unlock on iOS/Android
+//           var buf = _audioCtx.createBuffer(1, 1, 22050);
+//           var src = _audioCtx.createBufferSource();
+//           src.buffer = buf;
+//           src.connect(_audioCtx.destination);
+//           src.start(0);
+//         }
+//         if (_audioCtx.state === 'suspended') _audioCtx.resume();
+//       }
+//       document.addEventListener('click', unlockAudio, { once: false });
+//       document.addEventListener('touchstart', unlockAudio, { once: false });
+//
 //       function playBeep() {
 //         try {
-//           var ctx = new (window.AudioContext || window.webkitAudioContext)();
+//           var ctx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
 //           var osc = ctx.createOscillator();
 //           var gain = ctx.createGain();
 //           osc.connect(gain);
@@ -362,7 +379,8 @@
 //
 //       function playSoundFromDataUrl(dataUrl) {
 //         try {
-//           var ctx = new (window.AudioContext || window.webkitAudioContext)();
+//           var ctx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+//           if (ctx.state === 'suspended') ctx.resume();
 //           var base64 = dataUrl.split(',')[1];
 //           var binary = atob(base64);
 //           var bytes = new Uint8Array(binary.length);
@@ -376,6 +394,7 @@
 //         } catch(e) { playBeep(); }
 //       }
 //
+//       // After reload: try to play stored sound (works on desktop)
 //       if (sessionStorage.getItem('gas-pending-sound')) {
 //         sessionStorage.removeItem('gas-pending-sound');
 //         var soundData = sessionStorage.getItem('gas-sound-data');
@@ -389,11 +408,19 @@
 //
 //       window.addEventListener('message', function(e) {
 //         if (e.data && e.data.type === 'gas-reload') {
-//           sessionStorage.setItem('gas-pending-sound', '1');
+//           // Play sound BEFORE reload (needed for mobile — AudioContext
+//           // may still be unlocked from prior user interaction)
 //           if (e.data.soundDataUrl) {
+//             playSoundFromDataUrl(e.data.soundDataUrl);
 //             sessionStorage.setItem('gas-sound-data', e.data.soundDataUrl);
+//           } else {
+//             playBeep();
 //           }
-//           window.location.reload();
+//           sessionStorage.setItem('gas-pending-sound', '1');
+//           // Also vibrate on mobile as fallback
+//           try { navigator.vibrate(200); } catch(e) {}
+//           // Delay reload to let sound play
+//           setTimeout(function() { window.location.reload(); }, 1500);
 //         }
 //       });
 //     </script>
@@ -751,7 +778,7 @@
 //
 // =============================================
 
-var VERSION = "1.89";
+var VERSION = "1.90";
 var TITLE = "Attempt 17";
 
 function doGet() {
