@@ -789,7 +789,7 @@
 //
 // =============================================
 
-var VERSION = "2.10";
+var VERSION = "2.11";
 var TITLE = "Attempt 27";
 
 function doGet() {
@@ -973,8 +973,7 @@ function doGet() {
                 '<div>GitHub: ' + t.github + '</div>'
                 + '<div>UrlFetch: ' + t.urlFetch + '</div>'
                 + '<div>Sheets: ' + t.spreadsheet + '</div>'
-                + '<div>Exec: ' + t.execTime + '</div>'
-                + '<div>Mail: ' + t.mail + '</div>';
+                + '<div>Exec: ' + t.execTime + '</div>';
             })
             .fetchGitHubQuotaAndLimits();
         }
@@ -1122,14 +1121,6 @@ function fetchGitHubQuotaAndLimits() {
 
   // Apps Script execution time: 90 min/day (not queryable)
   result.execTime = "90 min/day";
-
-  // MailApp remaining daily quota (queryable!)
-  try {
-    var mailRemaining = MailApp.getRemainingDailyQuota();
-    result.mail = mailRemaining + " remaining/day";
-  } catch(e) {
-    result.mail = "error";
-  }
 
   return result;
 }
