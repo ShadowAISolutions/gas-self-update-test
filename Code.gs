@@ -866,8 +866,8 @@
 //
 // =============================================
 
-var VERSION = "01.01";
-var TITLE = "Attempt 31";
+var VERSION = "01.02";
+var TITLE = "Attempt 40";
 
 function doGet() {
   var html = `
