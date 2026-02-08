@@ -602,7 +602,7 @@
 //
 // =============================================
 
-var VERSION = "1.69";
+var VERSION = "1.70";
 var TITLE = "Attempt 10";
 
 function doGet() {
@@ -650,6 +650,7 @@ function doGet() {
       </div>
       <div style="margin-top: 10px;">
         <button onclick="playReadySound()" style="background:#1565c0;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;">🔊 Test Sound</button>
+        <button onclick="playBeep()" style="background:#6a1b9a;color:white;border:none;padding:6px 16px;border-radius:6px;cursor:pointer;font-size:13px;margin-left:6px;">🔔 Test Beep</button>
       </div>
       <div style="margin-top: 10px; font-size: 14px; color: #333;">
         <span style="font-weight: bold;">Is this awesome?</span>
@@ -669,6 +670,21 @@ function doGet() {
           try {
             new Audio(_soundDataUrl).play().catch(function(e) { console.log('Sound play failed:', e); });
           } catch(e) {}
+        }
+
+        function playBeep() {
+          try {
+            var ctx = new (window.AudioContext || window.webkitAudioContext)();
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 880;
+            gain.gain.value = 0.3;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.3);
+          } catch(e) { console.log('Beep failed:', e); }
         }
 
         function applyData(data) {
