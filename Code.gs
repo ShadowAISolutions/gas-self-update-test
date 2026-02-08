@@ -602,7 +602,7 @@
 //
 // =============================================
 
-var VERSION = "1.70";
+var VERSION = "1.71";
 var TITLE = "Attempt 10";
 
 function doGet() {
@@ -673,18 +673,30 @@ function doGet() {
         }
 
         function playBeep() {
+          var status = document.getElementById('result');
           try {
             var ctx = new (window.AudioContext || window.webkitAudioContext)();
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.value = 880;
-            gain.gain.value = 0.3;
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + 0.3);
-          } catch(e) { console.log('Beep failed:', e); }
+            status.style.background = '#fff3e0';
+            status.textContent = 'AudioContext state: ' + ctx.state;
+            ctx.resume().then(function() {
+              var osc = ctx.createOscillator();
+              var gain = ctx.createGain();
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.frequency.value = 880;
+              gain.gain.value = 0.3;
+              osc.start();
+              osc.stop(ctx.currentTime + 0.15);
+              status.style.background = '#e8f5e9';
+              status.textContent = 'Beep played (state: ' + ctx.state + ')';
+            }).catch(function(e) {
+              status.style.background = '#ffebee';
+              status.textContent = 'Resume failed: ' + e.message;
+            });
+          } catch(e) {
+            status.style.background = '#ffebee';
+            status.textContent = 'Beep error: ' + e.message;
+          }
         }
 
         function applyData(data) {
