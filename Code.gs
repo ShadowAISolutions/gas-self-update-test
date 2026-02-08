@@ -346,9 +346,6 @@
 //       src="https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec"
 //       allow="*">
 //     </iframe>
-//     <audio id="ready-sound" preload="auto"
-//       src="https://drive.google.com/uc?export=download&id=1bzVp6wpTHdJ4BRX8gbtDN73soWpmq1kN">
-//     </audio>
 //     <script>
 //       function playBeep() {
 //         try {
@@ -364,22 +361,39 @@
 //         } catch(e) {}
 //       }
 //
-//       function playReadySound() {
-//         var audio = document.getElementById('ready-sound');
-//         audio.currentTime = 0;
-//         audio.play().catch(function(e) {
-//           playBeep();
-//         });
+//       function playSoundFromDataUrl(dataUrl) {
+//         try {
+//           var ctx = new (window.AudioContext || window.webkitAudioContext)();
+//           var base64 = dataUrl.split(',')[1];
+//           var binary = atob(base64);
+//           var bytes = new Uint8Array(binary.length);
+//           for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+//           ctx.decodeAudioData(bytes.buffer, function(audioBuffer) {
+//             var source = ctx.createBufferSource();
+//             source.buffer = audioBuffer;
+//             source.connect(ctx.destination);
+//             source.start(0);
+//           }, function() { playBeep(); });
+//         } catch(e) { playBeep(); }
 //       }
 //
 //       if (sessionStorage.getItem('gas-pending-sound')) {
 //         sessionStorage.removeItem('gas-pending-sound');
-//         playReadySound();
+//         var soundData = sessionStorage.getItem('gas-sound-data');
+//         if (soundData) {
+//           sessionStorage.removeItem('gas-sound-data');
+//           playSoundFromDataUrl(soundData);
+//         } else {
+//           playBeep();
+//         }
 //       }
 //
 //       window.addEventListener('message', function(e) {
 //         if (e.data && e.data.type === 'gas-reload') {
 //           sessionStorage.setItem('gas-pending-sound', '1');
+//           if (e.data.soundDataUrl) {
+//             sessionStorage.setItem('gas-sound-data', e.data.soundDataUrl);
+//           }
 //           window.location.reload();
 //         }
 //       });
@@ -391,14 +405,14 @@
 //   /a/macros/shadowaisolutions.com/s/{DEPLOYMENT_ID}/exec
 // NOT the generic /macros/s/{DEPLOYMENT_ID}/exec format.
 // The iframe has allow="*" to permit audio, popups, etc. from GAS.
-// The <audio> element preloads the Drive MP3 so it's ready instantly.
 //
 // How it works:
-//   1. GAS app sends postMessage({type:'gas-reload'}) after deploy
-//   2. Embedding page receives message, sets sessionStorage flag, reloads
-//   3. After reload, checks flag → tries Drive MP3 first, falls back to
-//      AudioContext beep if browser blocks autoplay
-//   4. The GAS iframe loads fresh, auto-pulls latest from GitHub
+//   1. GAS app pre-loads Drive MP3 as base64 data URI via getSoundBase64()
+//   2. After deploy, GAS sends postMessage({type:'gas-reload', soundDataUrl:...})
+//   3. Embedding page stores soundDataUrl in sessionStorage, reloads
+//   4. After reload, decodes base64 → plays via AudioContext.decodeAudioData()
+//      (AudioContext bypasses browser autoplay restrictions that block <audio>.play())
+//   5. Falls back to beep if sound data not available or decode fails
 // The sessionStorage flag survives the reload but not tab close.
 //
 // RACE CONDITION — AUTO-DEPLOY CAN FIRE BEFORE CLAUDE CODE FINISHES:
@@ -665,7 +679,7 @@
 //
 // =============================================
 
-var VERSION = "1.79";
+var VERSION = "1.80";
 var TITLE = "Attempt 12";
 
 function doGet() {
@@ -860,8 +874,10 @@ function doGet() {
                     // Tell parent/top page (if embedded) to reload
                     // GAS double-iframes: your page > Google wrapper > sandbox (this code)
                     // So window.parent = Google wrapper, window.top = your page
-                    try { window.top.postMessage({type: 'gas-reload', version: data.version}, '*'); } catch(e) {}
-                    try { window.parent.postMessage({type: 'gas-reload', version: data.version}, '*'); } catch(e) {}
+                    var reloadMsg = {type: 'gas-reload', version: data.version};
+                    if (_soundDataUrl) reloadMsg.soundDataUrl = _soundDataUrl;
+                    try { window.top.postMessage(reloadMsg, '*'); } catch(e) {}
+                    try { window.parent.postMessage(reloadMsg, '*'); } catch(e) {}
                   })
                   .getAppData();
               }, 2000);
