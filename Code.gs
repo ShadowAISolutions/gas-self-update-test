@@ -602,7 +602,7 @@
 //
 // =============================================
 
-var VERSION = "1.71";
+var VERSION = "1.72";
 var TITLE = "Attempt 10";
 
 function doGet() {
@@ -666,32 +666,64 @@ function doGet() {
           .getSoundBase64();
 
         function playReadySound() {
-          if (!_soundDataUrl) return;
+          var status = document.getElementById('result');
+          if (!_soundDataUrl) {
+            status.style.background = '#ffebee';
+            status.textContent = 'Sound not loaded yet (_soundDataUrl is null)';
+            return;
+          }
+          status.style.background = '#fff3e0';
+          status.textContent = 'Playing... dataUrl length: ' + _soundDataUrl.length + ' | starts: ' + _soundDataUrl.substring(0, 30);
           try {
-            new Audio(_soundDataUrl).play().catch(function(e) { console.log('Sound play failed:', e); });
-          } catch(e) {}
+            var audio = new Audio(_soundDataUrl);
+            audio.play().then(function() {
+              status.style.background = '#e8f5e9';
+              status.textContent = 'Play started OK (length: ' + _soundDataUrl.length + ')';
+            }).catch(function(e) {
+              status.style.background = '#ffebee';
+              status.textContent = 'Play rejected: ' + e.message;
+            });
+          } catch(e) {
+            status.style.background = '#ffebee';
+            status.textContent = 'Audio error: ' + e.message;
+          }
         }
 
         function playBeep() {
           var status = document.getElementById('result');
           try {
-            var ctx = new (window.AudioContext || window.webkitAudioContext)();
-            status.style.background = '#fff3e0';
-            status.textContent = 'AudioContext state: ' + ctx.state;
-            ctx.resume().then(function() {
-              var osc = ctx.createOscillator();
-              var gain = ctx.createGain();
-              osc.connect(gain);
-              gain.connect(ctx.destination);
-              osc.frequency.value = 880;
-              gain.gain.value = 0.3;
-              osc.start();
-              osc.stop(ctx.currentTime + 0.15);
+            // Generate a tiny WAV beep as inline data URI (AudioContext is muted in GAS sandbox)
+            var sr = 8000, dur = 0.15, freq = 880, vol = 0.3;
+            var n = Math.floor(sr * dur);
+            var buf = new ArrayBuffer(44 + n * 2);
+            var v = new DataView(buf);
+            v.setUint32(0, 0x52494646, false);
+            v.setUint32(4, 36 + n * 2, true);
+            v.setUint32(8, 0x57415645, false);
+            v.setUint32(12, 0x666D7420, false);
+            v.setUint32(16, 16, true);
+            v.setUint16(20, 1, true);
+            v.setUint16(22, 1, true);
+            v.setUint32(24, sr, true);
+            v.setUint32(28, sr * 2, true);
+            v.setUint16(32, 2, true);
+            v.setUint16(34, 16, true);
+            v.setUint32(36, 0x64617461, false);
+            v.setUint32(40, n * 2, true);
+            for (var i = 0; i < n; i++) {
+              v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * freq * i / sr) * vol * 32767, true);
+            }
+            var bytes = new Uint8Array(buf);
+            var bin = '';
+            for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+            var dataUri = 'data:audio/wav;base64,' + btoa(bin);
+            var audio = new Audio(dataUri);
+            audio.play().then(function() {
               status.style.background = '#e8f5e9';
-              status.textContent = 'Beep played (state: ' + ctx.state + ')';
+              status.textContent = 'WAV beep play started OK';
             }).catch(function(e) {
               status.style.background = '#ffebee';
-              status.textContent = 'Resume failed: ' + e.message;
+              status.textContent = 'WAV beep rejected: ' + e.message;
             });
           } catch(e) {
             status.style.background = '#ffebee';
