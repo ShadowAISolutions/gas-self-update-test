@@ -356,6 +356,17 @@
 // fetchGitHubQuotaAndLimits() returns an object with github, urlFetch,
 // spreadsheet, and execTime fields. Only GitHub is live; rest are static.
 //
+// SOUND PLAYBACK (PRE-LOADED VIA SERVER)
+// ----------------------------------------
+// The "Test Sound" button plays an audio file hosted on Google Drive.
+// Direct client-side fetch from Drive URLs is blocked by GAS sandbox CSP.
+// Solution: getSoundBase64() fetches the file server-side via UrlFetchApp,
+// converts it to a base64 data URI, and returns it to the client.
+// The client pre-loads the sound on page load (1 google.script.run call +
+// 1 UrlFetchApp call) and caches the data URI in a JS variable. Clicking
+// the button plays instantly from the cached data URI. This adds 1 UrlFetchApp
+// call per page load but avoids embedding a huge base64 string in the source.
+//
 // COMPLETE CALL AUDIT — EVERY EXTERNAL CALL IN THE SYSTEM
 // --------------------------------------------------------
 // This section documents every API call, service call, and resource
@@ -396,6 +407,11 @@
 // │    └─ 1 google.script.run → fetchGitHubQuotaAndLimits()       │
 // │      └─ 1 UrlFetchApp: GitHub API GET /rate_limit              │
 // │      └─ 1 GitHub API call (counts toward rate limit)           │
+// │                                                                │
+// │ 5. getSoundBase64() — pre-load sound on page load              │
+// │    └─ 1 google.script.run → getSoundBase64()                   │
+// │      └─ 1 UrlFetchApp: Google Drive download                   │
+// │      └─ Returns base64 data URI, cached in client JS variable  │
 // └─────────────────────────────────────────────────────────────────┘
 //
 // ┌─────────────────────────────────────────────────────────────────┐
@@ -586,7 +602,7 @@
 //
 // =============================================
 
-var VERSION = "1.68";
+var VERSION = "1.69";
 var TITLE = "Attempt 10";
 
 function doGet() {
@@ -642,10 +658,16 @@ function doGet() {
       </div>
 
       <script>
+        // Pre-load sound from server on page load (avoids CSP blocking direct Drive URLs)
+        var _soundDataUrl = null;
+        google.script.run
+          .withSuccessHandler(function(dataUrl) { _soundDataUrl = dataUrl; })
+          .getSoundBase64();
+
         function playReadySound() {
+          if (!_soundDataUrl) return;
           try {
-            var audio = new Audio('https://drive.google.com/uc?export=download&id=1bzVp6wpTHdJ4BRX8gbtDN73soWpmq1kN');
-            audio.play().catch(function(e) { console.log('Sound play failed:', e); });
+            new Audio(_soundDataUrl).play().catch(function(e) { console.log('Sound play failed:', e); });
           } catch(e) {}
         }
 
@@ -776,6 +798,15 @@ function doPost(e) {
 
 function getAppData() {
   return { version: "v" + VERSION, title: TITLE };
+}
+
+function getSoundBase64() {
+  var url = "https://drive.google.com/uc?export=download&id=1bzVp6wpTHdJ4BRX8gbtDN73soWpmq1kN";
+  var response = UrlFetchApp.fetch(url, { followRedirects: true });
+  var blob = response.getBlob();
+  var base64 = Utilities.base64Encode(blob.getBytes());
+  var contentType = blob.getContentType() || "audio/mpeg";
+  return "data:" + contentType + ";base64," + base64;
 }
 
 function fetchGitHubQuotaAndLimits() {
