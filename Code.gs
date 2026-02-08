@@ -788,8 +788,8 @@
 //
 // =============================================
 
-var VERSION = "1.96";
-var TITLE = "Attempt 20";
+var VERSION = "1.97";
+var TITLE = "Attempt 21";
 
 function doGet() {
   var html = `
