@@ -408,19 +408,11 @@
 //
 //       window.addEventListener('message', function(e) {
 //         if (e.data && e.data.type === 'gas-reload') {
-//           // Play sound BEFORE reload (needed for mobile — AudioContext
-//           // may still be unlocked from prior user interaction)
-//           if (e.data.soundDataUrl) {
-//             playSoundFromDataUrl(e.data.soundDataUrl);
-//             sessionStorage.setItem('gas-sound-data', e.data.soundDataUrl);
-//           } else {
-//             playBeep();
-//           }
 //           sessionStorage.setItem('gas-pending-sound', '1');
-//           // Also vibrate on mobile as fallback
-//           try { navigator.vibrate(200); } catch(e) {}
-//           // Delay reload to let sound play
-//           setTimeout(function() { window.location.reload(); }, 1500);
+//           if (e.data.soundDataUrl) {
+//             sessionStorage.setItem('gas-sound-data', e.data.soundDataUrl);
+//           }
+//           window.location.reload();
 //         }
 //       });
 //     </script>
@@ -778,7 +770,7 @@
 //
 // =============================================
 
-var VERSION = "1.91";
+var VERSION = "1.92";
 var TITLE = "Attempt 18";
 
 function doGet() {
