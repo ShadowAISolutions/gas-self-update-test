@@ -208,6 +208,16 @@
 //      red "Reload Page" button which navigates via form target="_top"
 //      to the embedding page URL.
 //
+// AUTOMATIC VERSION CLEANUP
+// --------------------------
+// Apps Script has a 200 version limit. After each successful deploy,
+// pullAndDeployFromGitHub() automatically deletes all versions older
+// than the 10 most recent. It lists all versions via the Apps Script
+// API (paginated), sorts by versionNumber descending, and DELETEs
+// everything after the first 10. Errors are silently ignored (some
+// versions may be referenced by deployments and can't be deleted).
+// The status message shows how many versions were cleaned up.
+//
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
 // - V8 runtime is REQUIRED (set in appsscript.json) because the code
@@ -770,7 +780,7 @@
 //
 // =============================================
 
-var VERSION = "1.92";
+var VERSION = "1.93";
 var TITLE = "Attempt 18";
 
 function doGet() {
@@ -1189,5 +1199,46 @@ function pullAndDeployFromGitHub() {
     })
   });
 
-  return "Updated to v" + pulledVersion + " (deployment " + newVersion + ")";
+  // Clean up old versions — keep only the 10 most recent
+  var deletedCount = 0;
+  try {
+    var allVersions = [];
+    var pageToken = null;
+    do {
+      var listUrl = "https://script.googleapis.com/v1/projects/" + scriptId + "/versions"
+        + (pageToken ? "?pageToken=" + pageToken : "");
+      var listResp = UrlFetchApp.fetch(listUrl, {
+        headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
+      });
+      var listData = JSON.parse(listResp.getContentText());
+      if (listData.versions) {
+        allVersions = allVersions.concat(listData.versions);
+      }
+      pageToken = listData.nextPageToken || null;
+    } while (pageToken);
+
+    // Sort by version number descending (newest first)
+    allVersions.sort(function(a, b) { return b.versionNumber - a.versionNumber; });
+
+    // Delete everything after the 10 most recent
+    for (var i = 10; i < allVersions.length; i++) {
+      try {
+        var delUrl = "https://script.googleapis.com/v1/projects/" + scriptId
+          + "/versions/" + allVersions[i].versionNumber;
+        UrlFetchApp.fetch(delUrl, {
+          method: "delete",
+          headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
+        });
+        deletedCount++;
+      } catch(delErr) {
+        // Some versions may not be deletable (e.g. referenced by deployments) — skip
+      }
+    }
+  } catch(cleanupErr) {
+    // Version cleanup is best-effort — don't fail the deploy
+  }
+
+  var msg = "Updated to v" + pulledVersion + " (deployment " + newVersion + ")";
+  if (deletedCount > 0) msg += " — cleaned up " + deletedCount + " old version(s)";
+  return msg;
 }
