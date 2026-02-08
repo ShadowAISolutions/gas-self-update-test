@@ -346,24 +346,19 @@
 //       src="https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec"
 //       allow="*">
 //     </iframe>
+//     <audio id="ready-sound" preload="auto"
+//       src="https://drive.google.com/uc?export=download&id=1bzVp6wpTHdJ4BRX8gbtDN73soWpmq1kN">
+//     </audio>
 //     <script>
-//       function playBeep() {
-//         try {
-//           var ctx = new (window.AudioContext || window.webkitAudioContext)();
-//           var osc = ctx.createOscillator();
-//           var gain = ctx.createGain();
-//           osc.connect(gain);
-//           gain.connect(ctx.destination);
-//           osc.frequency.value = 880;
-//           gain.gain.value = 0.3;
-//           osc.start();
-//           osc.stop(ctx.currentTime + 0.15);
-//         } catch(e) {}
+//       function playReadySound() {
+//         var audio = document.getElementById('ready-sound');
+//         audio.currentTime = 0;
+//         audio.play().catch(function(e) { console.log('Sound play failed:', e); });
 //       }
 //
 //       if (sessionStorage.getItem('gas-pending-sound')) {
 //         sessionStorage.removeItem('gas-pending-sound');
-//         playBeep();
+//         playReadySound();
 //       }
 //
 //       window.addEventListener('message', function(e) {
@@ -380,11 +375,12 @@
 //   /a/macros/shadowaisolutions.com/s/{DEPLOYMENT_ID}/exec
 // NOT the generic /macros/s/{DEPLOYMENT_ID}/exec format.
 // The iframe has allow="*" to permit audio, popups, etc. from GAS.
+// The <audio> element preloads the Drive MP3 so it's ready instantly.
 //
 // How it works:
 //   1. GAS app sends postMessage({type:'gas-reload'}) after deploy
 //   2. Embedding page receives message, sets sessionStorage flag, reloads
-//   3. After reload, checks flag → plays 880Hz beep via AudioContext
+//   3. After reload, checks flag → plays Drive MP3 via <audio> element
 //   4. The GAS iframe loads fresh, auto-pulls latest from GitHub
 // The sessionStorage flag survives the reload but not tab close.
 //
@@ -652,7 +648,7 @@
 //
 // =============================================
 
-var VERSION = "1.76";
+var VERSION = "1.77";
 var TITLE = "Attempt 11";
 
 function doGet() {
