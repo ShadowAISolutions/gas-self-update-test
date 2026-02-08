@@ -326,8 +326,7 @@
 // The web app is embedded as a full-screen iframe on an external page:
 //   https://www.shadowaisolutions.com/test
 // This solves the auto-reload problem (see PAGE RELOAD AFTER DEPLOY)
-// and enables sound notifications (AudioContext works on the top-level
-// page even when it may be muted inside the GAS sandbox iframe).
+// and enables sound notifications on deploy.
 //
 // FULL EMBEDDING PAGE HTML (keep this up to date!):
 //   <!DOCTYPE html>
@@ -406,14 +405,80 @@
 // NOT the generic /macros/s/{DEPLOYMENT_ID}/exec format.
 // The iframe has allow="*" to permit audio, popups, etc. from GAS.
 //
-// How it works:
-//   1. GAS app pre-loads Drive MP3 as base64 data URI via getSoundBase64()
-//   2. After deploy, GAS sends postMessage({type:'gas-reload', soundDataUrl:...})
-//   3. Embedding page stores soundDataUrl in sessionStorage, reloads
-//   4. After reload, decodes base64 → plays via AudioContext.decodeAudioData()
-//      (AudioContext bypasses browser autoplay restrictions that block <audio>.play())
-//   5. Falls back to beep if sound data not available or decode fails
-// The sessionStorage flag survives the reload but not tab close.
+// SOUND ON RELOAD — HOW IT WORKS (THE WORKING SOLUTION):
+//   The goal: play the Google Drive MP3 automatically when the page
+//   reloads after a deploy. This required solving two hard problems:
+//     a) Getting the MP3 data to the embedding page (CORS blocks
+//        direct fetch from Drive on a different origin)
+//     b) Playing audio on page load (browsers block autoplay)
+//
+//   Solution — postMessage + sessionStorage + AudioContext.decodeAudioData:
+//     1. GAS app pre-loads the Drive MP3 as a base64 data URI on page
+//        load via getSoundBase64() (server-side UrlFetchApp, no CORS)
+//     2. After deploy, GAS sends postMessage to the embedding page:
+//          {type:'gas-reload', version:'...', soundDataUrl:'data:audio/mpeg;base64,...'}
+//        The soundDataUrl carries the full base64-encoded MP3.
+//     3. Embedding page receives the message, stores soundDataUrl in
+//        sessionStorage (survives reload, ~40KB fits easily in 5MB limit),
+//        sets a pending-sound flag, and reloads.
+//     4. After reload, checks the flag. If sound data exists in
+//        sessionStorage, decodes the base64 into an ArrayBuffer and
+//        plays it via AudioContext.decodeAudioData() + BufferSource.
+//        AudioContext bypasses the browser autoplay policy that blocks
+//        <audio>.play() on page load.
+//     5. Falls back to an AudioContext beep if sound data is missing
+//        (e.g. getSoundBase64 hadn't finished loading) or decode fails.
+//
+// SOUND — WHAT DID NOT WORK (AND WHY):
+//   We tried many approaches before finding the working solution above.
+//   Documenting these so future sessions don't re-attempt them:
+//
+//   1. Direct Drive URL in <audio> element:
+//        new Audio('https://drive.google.com/uc?export=download&id=...')
+//      FAILED: GAS sandbox CSP blocks loading audio from drive.google.com.
+//      The browser silently refuses to fetch the resource.
+//
+//   2. Server-side base64 + new Audio(dataUri) inside GAS sandbox:
+//        getSoundBase64() returns data URI → new Audio(dataUri).play()
+//      WORKS for button clicks (user gesture), but:
+//      - Cannot autoplay on page load (blocked by autoplay policy)
+//      - The "Test Sound (Drive)" button in the GAS app uses this method
+//
+//   3. AudioContext oscillator beep inside GAS sandbox:
+//        new AudioContext() → createOscillator() → start()
+//      INCONSISTENT: AudioContext reports state "running" but produces
+//      no audible sound from inside the GAS sandbox iframe. The browser
+//      allows the API calls but silently mutes the actual audio output.
+//      This worked in earlier versions but stopped — likely a browser
+//      or GAS sandbox policy change. NOT RELIABLE inside GAS sandbox.
+//      However, AudioContext DOES work on the embedding page (top-level,
+//      not sandboxed), which is why the working solution uses it there.
+//
+//   4. Inline WAV generation via JavaScript (inside GAS sandbox):
+//        Generate PCM samples → build WAV header → btoa() → data URI
+//      FAILED: Same issue as #3 — new Audio(wavDataUri) works for
+//      button clicks but the GAS sandbox may silently mute it. Also
+//      adds code complexity for no benefit over approach #2.
+//
+//   5. Hardcoded SOUND_B64 variable (huge base64 string in Code.gs):
+//        var SOUND_B64 = "SUQzAwAA..."; new Audio('data:audio/mpeg;base64,' + SOUND_B64)
+//      WORKS for button clicks, but makes Code.gs extremely long
+//      (~30KB+ of base64 for a short MP3). Rejected for code size.
+//
+//   6. <audio preload="auto">.play() on embedding page after reload:
+//        <audio src="drive-url" preload="auto"> + sessionStorage flag
+//      FAILED: Browser autoplay policy blocks <audio>.play() on page
+//      load, even after a reload triggered by user action. The audio
+//      element loads the file fine, but play() is rejected with
+//      NotAllowedError. This is the key limitation that AudioContext
+//      (approach in working solution) bypasses.
+//
+//   KEY INSIGHT: AudioContext.decodeAudioData() + BufferSource.start()
+//   is NOT subject to the same autoplay restrictions as <audio>.play().
+//   Browsers treat AudioContext more permissively, especially when the
+//   user has recently interacted with the page (which they have, since
+//   the reload was triggered by their activity). This is why the beep
+//   worked on reload but <audio>.play() did not.
 //
 // RACE CONDITION — AUTO-DEPLOY CAN FIRE BEFORE CLAUDE CODE FINISHES:
 //   The auto-deploy pipeline is very fast: push → GitHub Action merge →
@@ -433,16 +498,23 @@
 // fetchGitHubQuotaAndLimits() returns an object with github, urlFetch,
 // spreadsheet, and execTime fields. Only GitHub is live; rest are static.
 //
-// SOUND PLAYBACK (PRE-LOADED VIA SERVER)
+// SOUND PLAYBACK — TWO CONTEXTS
 // ----------------------------------------
-// The "Test Sound" button plays an audio file hosted on Google Drive.
-// Direct client-side fetch from Drive URLs is blocked by GAS sandbox CSP.
-// Solution: getSoundBase64() fetches the file server-side via UrlFetchApp,
-// converts it to a base64 data URI, and returns it to the client.
-// The client pre-loads the sound on page load (1 google.script.run call +
-// 1 UrlFetchApp call) and caches the data URI in a JS variable. Clicking
-// the button plays instantly from the cached data URI. This adds 1 UrlFetchApp
-// call per page load but avoids embedding a huge base64 string in the source.
+// The Drive MP3 (Google Drive file ID: 1bzVp6wpTHdJ4BRX8gbtDN73soWpmq1kN)
+// is played in two different contexts with different mechanisms:
+//
+// A) INSIDE GAS SANDBOX (Test Sound button, manual click):
+//    getSoundBase64() fetches the MP3 server-side via UrlFetchApp,
+//    returns a base64 data URI. Client pre-loads on page load into
+//    _soundDataUrl variable. Button click → new Audio(_soundDataUrl).play().
+//    Works because button click is a user gesture (satisfies autoplay).
+//    Costs 1 UrlFetchApp + 1 google.script.run per page load.
+//
+// B) ON EMBEDDING PAGE (auto-play after deploy reload):
+//    The GAS app includes _soundDataUrl in the gas-reload postMessage.
+//    Embedding page stores it in sessionStorage, reloads, then plays
+//    via AudioContext.decodeAudioData() which bypasses autoplay policy.
+//    See EMBEDDING section above for full details and failed approaches.
 //
 // COMPLETE CALL AUDIT — EVERY EXTERNAL CALL IN THE SYSTEM
 // --------------------------------------------------------
@@ -679,7 +751,7 @@
 //
 // =============================================
 
-var VERSION = "1.81";
+var VERSION = "1.82";
 var TITLE = "Attempt 13";
 
 function doGet() {
