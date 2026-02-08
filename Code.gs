@@ -208,15 +208,23 @@
 //      red "Reload Page" button which navigates via form target="_top"
 //      to the embedding page URL.
 //
-// AUTOMATIC VERSION CLEANUP
-// --------------------------
-// Apps Script has a 200 version limit. After each successful deploy,
-// pullAndDeployFromGitHub() automatically deletes all versions older
-// than the 10 most recent. It lists all versions via the Apps Script
-// API (paginated), sorts by versionNumber descending, and DELETEs
-// everything after the first 10. Errors are silently ignored (some
-// versions may be referenced by deployments and can't be deleted).
-// The status message shows how many versions were cleaned up.
+// VERSION LIMIT MANAGEMENT (200 VERSION CAP)
+// --------------------------------------------
+// Apps Script has a hard 200 version limit. The API does NOT support
+// deleting versions — there is no DELETE endpoint (open feature request
+// since 2018). Versions can ONLY be deleted via the Apps Script editor:
+//   Project History > Bulk delete versions
+//
+// What the code DOES do automatically after each deploy:
+//   1. Deletes unused deployments via API (projects.deployments.delete)
+//      — this frees their associated versions for manual deletion
+//   2. Counts total versions and reports "X/200 versions" in the status
+//   3. Shows a warning when versions reach 180+ (approaching limit)
+//
+// When the warning appears, manually clean up in the Apps Script editor:
+//   1. Go to Deploy > Manage Deployments > archive unused deployments
+//   2. Go to Project History > Bulk delete versions
+// A version can only be deleted if no deployment references it.
 //
 // KEY DESIGN DECISIONS & GOTCHAS
 // ------------------------------
@@ -780,7 +788,7 @@
 //
 // =============================================
 
-var VERSION = "1.94";
+var VERSION = "1.95";
 var TITLE = "Attempt 19";
 
 function doGet() {
@@ -1199,46 +1207,70 @@ function pullAndDeployFromGitHub() {
     })
   });
 
-  // Clean up old versions — keep only the 10 most recent
-  var deletedCount = 0;
+  // Clean up old deployments and report version count.
+  // NOTE: Apps Script API does NOT support deleting versions (no DELETE endpoint).
+  // Versions can ONLY be deleted via the Apps Script editor web UI:
+  //   Project History > Bulk delete versions
+  // But we CAN delete unused deployments via API, which frees versions for manual deletion.
+  var cleanupInfo = "";
   try {
-    var allVersions = [];
-    var pageToken = null;
+    // 1. Delete unused deployments (frees versions for manual deletion in UI)
+    var deletedDeploys = 0;
+    var deployPageToken = null;
+    var allDeploys = [];
     do {
-      var listUrl = "https://script.googleapis.com/v1/projects/" + scriptId + "/versions"
-        + (pageToken ? "?pageToken=" + pageToken : "");
-      var listResp = UrlFetchApp.fetch(listUrl, {
+      var dListUrl = "https://script.googleapis.com/v1/projects/" + scriptId + "/deployments"
+        + (deployPageToken ? "?pageToken=" + deployPageToken : "");
+      var dListResp = UrlFetchApp.fetch(dListUrl, {
         headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
       });
-      var listData = JSON.parse(listResp.getContentText());
-      if (listData.versions) {
-        allVersions = allVersions.concat(listData.versions);
+      var dListData = JSON.parse(dListResp.getContentText());
+      if (dListData.deployments) {
+        allDeploys = allDeploys.concat(dListData.deployments);
       }
-      pageToken = listData.nextPageToken || null;
-    } while (pageToken);
+      deployPageToken = dListData.nextPageToken || null;
+    } while (deployPageToken);
 
-    // Sort by version number descending (newest first)
-    allVersions.sort(function(a, b) { return b.versionNumber - a.versionNumber; });
-
-    // Delete everything after the 10 most recent
-    for (var i = 10; i < allVersions.length; i++) {
+    for (var d = 0; d < allDeploys.length; d++) {
+      var dep = allDeploys[d];
+      // Skip the active web app deployment and the HEAD deployment
+      if (dep.deploymentId === DEPLOYMENT_ID) continue;
+      if (dep.deploymentConfig && dep.deploymentConfig.versionNumber === 0) continue;
       try {
-        var delUrl = "https://script.googleapis.com/v1/projects/" + scriptId
-          + "/versions/" + allVersions[i].versionNumber;
-        UrlFetchApp.fetch(delUrl, {
+        var dDelUrl = "https://script.googleapis.com/v1/projects/" + scriptId
+          + "/deployments/" + dep.deploymentId;
+        UrlFetchApp.fetch(dDelUrl, {
           method: "delete",
           headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
         });
-        deletedCount++;
-      } catch(delErr) {
-        // Some versions may not be deletable (e.g. referenced by deployments) — skip
+        deletedDeploys++;
+      } catch(dDelErr) {
+        // Skip deployments that can't be deleted
       }
     }
+
+    // 2. Count total versions so user knows when to manually clean up
+    var totalVersions = 0;
+    var vPageToken = null;
+    do {
+      var vListUrl = "https://script.googleapis.com/v1/projects/" + scriptId + "/versions"
+        + (vPageToken ? "?pageToken=" + vPageToken : "");
+      var vListResp = UrlFetchApp.fetch(vListUrl, {
+        headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
+      });
+      var vListData = JSON.parse(vListResp.getContentText());
+      if (vListData.versions) {
+        totalVersions += vListData.versions.length;
+      }
+      vPageToken = vListData.nextPageToken || null;
+    } while (vPageToken);
+
+    cleanupInfo = " | " + totalVersions + "/200 versions";
+    if (deletedDeploys > 0) cleanupInfo += ", freed " + deletedDeploys + " old deployment(s)";
+    if (totalVersions >= 180) cleanupInfo += " ⚠️ APPROACHING LIMIT — manually delete old versions in Apps Script editor: Project History > Bulk delete versions";
   } catch(cleanupErr) {
-    // Version cleanup is best-effort — don't fail the deploy
+    cleanupInfo = " | Version cleanup error: " + cleanupErr.message;
   }
 
-  var msg = "Updated to v" + pulledVersion + " (deployment " + newVersion + ")";
-  if (deletedCount > 0) msg += " — cleaned up " + deletedCount + " old version(s)";
-  return msg;
+  return "Updated to v" + pulledVersion + " (deployment " + newVersion + ")" + cleanupInfo;
 }
