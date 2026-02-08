@@ -331,45 +331,55 @@
 //
 // FULL EMBEDDING PAGE HTML (keep this up to date!):
 //   <!DOCTYPE html>
-//   <html>
+//   <html lang="en">
 //   <head>
-//       <title>GAS Self-Update Dashboard</title>
-//       <style>
-//           html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-//           iframe { width: 100%; height: 100%; border: none; }
-//       </style>
+//     <meta charset="UTF-8">
+//     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//     <title>GAS Self-Update Dashboard</title>
+//     <style>
+//       html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+//       iframe { width: 100%; height: 100%; border: none; }
+//     </style>
 //   </head>
 //   <body>
-//       <iframe id="content-frame" src="https://script.google.com/macros/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec"></iframe>
-//       <script>
-//           function playBeep() {
-//               try {
-//                   var ctx = new (window.AudioContext || window.webkitAudioContext)();
-//                   var osc = ctx.createOscillator();
-//                   var gain = ctx.createGain();
-//                   osc.connect(gain);
-//                   gain.connect(ctx.destination);
-//                   osc.frequency.value = 880;
-//                   gain.gain.value = 0.3;
-//                   osc.start();
-//                   osc.stop(ctx.currentTime + 0.15);
-//               } catch(e) {}
-//           }
+//     <iframe id="gas-app"
+//       src="https://script.google.com/a/macros/shadowaisolutions.com/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec"
+//       allow="*">
+//     </iframe>
+//     <script>
+//       function playBeep() {
+//         try {
+//           var ctx = new (window.AudioContext || window.webkitAudioContext)();
+//           var osc = ctx.createOscillator();
+//           var gain = ctx.createGain();
+//           osc.connect(gain);
+//           gain.connect(ctx.destination);
+//           osc.frequency.value = 880;
+//           gain.gain.value = 0.3;
+//           osc.start();
+//           osc.stop(ctx.currentTime + 0.15);
+//         } catch(e) {}
+//       }
 //
-//           if (sessionStorage.getItem('gas-pending-sound')) {
-//               sessionStorage.removeItem('gas-pending-sound');
-//               playBeep();
-//           }
+//       if (sessionStorage.getItem('gas-pending-sound')) {
+//         sessionStorage.removeItem('gas-pending-sound');
+//         playBeep();
+//       }
 //
-//           window.addEventListener('message', function(e) {
-//               if (e.data && e.data.type === 'gas-reload') {
-//                   sessionStorage.setItem('gas-pending-sound', '1');
-//                   window.location.reload();
-//               }
-//           });
-//       </script>
+//       window.addEventListener('message', function(e) {
+//         if (e.data && e.data.type === 'gas-reload') {
+//           sessionStorage.setItem('gas-pending-sound', '1');
+//           window.location.reload();
+//         }
+//       });
+//     </script>
 //   </body>
 //   </html>
+//
+// NOTE: The iframe src uses the Workspace domain-specific URL format:
+//   /a/macros/shadowaisolutions.com/s/{DEPLOYMENT_ID}/exec
+// NOT the generic /macros/s/{DEPLOYMENT_ID}/exec format.
+// The iframe has allow="*" to permit audio, popups, etc. from GAS.
 //
 // How it works:
 //   1. GAS app sends postMessage({type:'gas-reload'}) after deploy
@@ -642,7 +652,7 @@
 //
 // =============================================
 
-var VERSION = "1.74";
+var VERSION = "1.75";
 var TITLE = "Attempt 10";
 
 function doGet() {
