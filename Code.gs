@@ -435,6 +435,22 @@
 //           window.location.reload();
 //         }
 //       });
+//
+//       // Screen Wake Lock — keep Android screen on while page is visible
+//       var _wakeLock = null;
+//       async function requestWakeLock() {
+//         try {
+//           if (navigator.wakeLock) {
+//             _wakeLock = await navigator.wakeLock.request('screen');
+//             _wakeLock.addEventListener('release', function() { _wakeLock = null; });
+//           }
+//         } catch(e) {}
+//       }
+//       requestWakeLock();
+//       // Re-acquire when tab becomes visible again (auto-releases on tab switch)
+//       document.addEventListener('visibilitychange', function() {
+//         if (document.visibilityState === 'visible') requestWakeLock();
+//       });
 //     </script>
 //   </body>
 //   </html>
@@ -443,6 +459,14 @@
 //   /a/macros/shadowaisolutions.com/s/{DEPLOYMENT_ID}/exec
 // NOT the generic /macros/s/{DEPLOYMENT_ID}/exec format.
 // The iframe has allow="*" to permit audio, popups, etc. from GAS.
+//
+// SCREEN WAKE LOCK:
+//   The embedding page uses the Screen Wake Lock API to prevent Android
+//   devices from turning off the screen while the dashboard is visible.
+//   - Auto-acquires on page load (no user gesture needed on Android Chrome)
+//   - Auto-releases when tab is hidden/minimized, re-acquires on return
+//   - Silently fails on unsupported browsers (no visible effect on desktop)
+//   - Supported: Android Chrome 84+, Safari 16.4+, Firefox 126+
 //
 // SOUND ON RELOAD — HOW IT WORKS (THE WORKING SOLUTION):
 //   The goal: play the Google Drive MP3 automatically when the page
@@ -801,7 +825,7 @@
 //
 // =============================================
 
-var VERSION = "2.15";
+var VERSION = "2.16";
 var TITLE = "Attempt 28";
 
 function doGet() {
