@@ -231,11 +231,12 @@
 //   uses template literals (backticks). Without V8, you get
 //   "illegal character" syntax errors.
 //
-// - Four OAuth scopes are required:
+// - Five OAuth scopes are required:
 //     script.projects        → read/write project source code
 //     script.external_request → fetch from GitHub API
 //     script.deployments     → update the live deployment
 //     spreadsheets           → write version to Live_Sheet tab
+//     script.send_mail       → MailApp.getRemainingDailyQuota()
 //   Missing any scope causes 403 "insufficient authentication scopes".
 //   After adding scopes to appsscript.json, you must re-authorize by
 //   running any function from the editor.
@@ -745,7 +746,8 @@
 //     "https://www.googleapis.com/auth/script.projects",
 //     "https://www.googleapis.com/auth/script.external_request",
 //     "https://www.googleapis.com/auth/script.deployments",
-//     "https://www.googleapis.com/auth/spreadsheets"
+//     "https://www.googleapis.com/auth/spreadsheets",
+//     "https://www.googleapis.com/auth/script.send_mail"
 //   ]
 // }
 //
