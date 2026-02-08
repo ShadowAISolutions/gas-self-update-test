@@ -788,7 +788,7 @@
 //
 // =============================================
 
-var VERSION = "2.01";
+var VERSION = "2.02";
 var TITLE = "Attempt 24";
 
 function doGet() {
@@ -1043,8 +1043,32 @@ function doPost(e) {
 
 function getAppData() {
   var data = { version: "v" + VERSION, title: TITLE };
-  var vStatus = CacheService.getScriptCache().get("version_count_status");
-  if (vStatus) data.versionCount = vStatus;
+  // Always show version count — read from cache first, fall back to live API call
+  var cache = CacheService.getScriptCache();
+  var vStatus = cache.get("version_count_status");
+  if (!vStatus) {
+    try {
+      var scriptId = ScriptApp.getScriptId();
+      var totalVersions = 0;
+      var vPageToken = null;
+      do {
+        var vListUrl = "https://script.googleapis.com/v1/projects/" + scriptId + "/versions"
+          + (vPageToken ? "?pageToken=" + vPageToken : "");
+        var vListResp = UrlFetchApp.fetch(vListUrl, {
+          headers: { "Authorization": "Bearer " + ScriptApp.getOAuthToken() }
+        });
+        var vListData = JSON.parse(vListResp.getContentText());
+        if (vListData.versions) totalVersions += vListData.versions.length;
+        vPageToken = vListData.nextPageToken || null;
+      } while (vPageToken);
+      vStatus = totalVersions + "/200 versions";
+      if (totalVersions >= 180) vStatus += " — APPROACHING LIMIT! Manually delete old versions in Apps Script editor: Project History > Bulk delete versions";
+      cache.put("version_count_status", vStatus, 21600);
+    } catch(e) {
+      vStatus = "Unable to check version count";
+    }
+  }
+  data.versionCount = vStatus;
   return data;
 }
 
