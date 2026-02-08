@@ -788,7 +788,7 @@
 //
 // =============================================
 
-var VERSION = "1.99";
+var VERSION = "2.00";
 var TITLE = "Attempt 23";
 
 function doGet() {
@@ -824,6 +824,7 @@ function doGet() {
         <button id="reload-btn" type="submit" style="background:#2e7d32;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:14px;margin-top:10px;">🔄 Reload Page</button>
       </form>
       <div id="result"></div>
+      <div id="versionCount" style="margin-top: 6px; font-size: 12px; color: #888;"></div>
 
       <div id="sheet-container">
         <h3>Live_Sheet</h3>
@@ -903,7 +904,13 @@ function doGet() {
         function applyData(data) {
           for (var key in data) {
             var el = document.getElementById(key);
-            if (el) el.textContent = data[key];
+            if (el) {
+              el.textContent = data[key];
+              if (key === 'versionCount' && data[key].indexOf('LIMIT') !== -1) {
+                el.style.color = '#d32f2f';
+                el.style.fontWeight = 'bold';
+              }
+            }
           }
         }
 
@@ -1035,7 +1042,10 @@ function doPost(e) {
 }
 
 function getAppData() {
-  return { version: "v" + VERSION, title: TITLE };
+  var data = { version: "v" + VERSION, title: TITLE };
+  var vStatus = CacheService.getScriptCache().get("version_count_status");
+  if (vStatus) data.versionCount = vStatus;
+  return data;
 }
 
 function getSoundBase64() {
@@ -1267,7 +1277,10 @@ function pullAndDeployFromGitHub() {
 
     cleanupInfo = " | " + totalVersions + "/200 versions";
     if (deletedDeploys > 0) cleanupInfo += ", freed " + deletedDeploys + " old deployment(s)";
-    if (totalVersions >= 180) cleanupInfo += " ⚠️ APPROACHING LIMIT — manually delete old versions in Apps Script editor: Project History > Bulk delete versions";
+    // Cache the version count so getAppData() can display it persistently
+    var versionStatus = totalVersions + "/200 versions";
+    if (totalVersions >= 180) versionStatus += " — APPROACHING LIMIT! Manually delete old versions in Apps Script editor: Project History > Bulk delete versions";
+    CacheService.getScriptCache().put("version_count_status", versionStatus, 21600);
   } catch(cleanupErr) {
     cleanupInfo = " | Version cleanup error: " + cleanupErr.message;
   }
