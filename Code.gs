@@ -791,7 +791,7 @@
 //
 // =============================================
 
-var VERSION = "2.13";
+var VERSION = "2.14";
 var TITLE = "Attempt 28";
 
 function doGet() {
@@ -972,11 +972,14 @@ function doGet() {
           google.script.run
             .withSuccessHandler(function(t) {
               document.getElementById('token-info').innerHTML =
-                '<div>GitHub: ' + t.github + '</div>'
+                '<div style="font-weight:bold;color:#1b5e20;margin-bottom:3px;">Live Quotas</div>'
+                + '<div>GitHub: ' + t.github + '</div>'
+                + '<div>Mail: ' + t.mail + '</div>'
+                + '<div style="border-top:1px solid #ccc;margin:4px 0;"></div>'
+                + '<div style="font-weight:bold;color:#666;margin-bottom:3px;">Estimates</div>'
                 + '<div>UrlFetch: ' + t.urlFetch + '</div>'
                 + '<div>Sheets: ' + t.spreadsheet + '</div>'
-                + '<div>Exec: ' + t.execTime + '</div>'
-                + '<div>Mail: ' + t.mail + '</div>';
+                + '<div>Exec: ' + t.execTime + '</div>';
             })
             .fetchGitHubQuotaAndLimits();
         }
