@@ -321,22 +321,62 @@
 // NOTE: doPost() runs on the CURRENTLY DEPLOYED code, not the just-pushed
 // code. So the doPost handler must already be deployed for this to work.
 //
-// EMBEDDING (for auto-reload)
-// ----------------------------
+// EMBEDDING (for auto-reload + sound notification)
+// --------------------------------------------------
 // The web app is embedded as a full-screen iframe on an external page:
 //   https://www.shadowaisolutions.com/test
-// This solves the auto-reload problem (see PAGE RELOAD AFTER DEPLOY).
-// The embedding page needs this HTML:
-//   <iframe id="gas-app" src="EXEC_URL" style="width:100%;height:100vh;border:none;"></iframe>
-//   <script>
-//     window.addEventListener('message', function(e) {
-//       if (e.data && e.data.type === 'gas-reload') {
-//         window.location.reload();
-//       }
-//     });
-//   </script>
-// When the GAS app deploys an update, it sends postMessage to the
-// embedding page, which reloads itself (and the iframe). Fully automatic.
+// This solves the auto-reload problem (see PAGE RELOAD AFTER DEPLOY)
+// and enables sound notifications (AudioContext works on the top-level
+// page even when it may be muted inside the GAS sandbox iframe).
+//
+// FULL EMBEDDING PAGE HTML (keep this up to date!):
+//   <!DOCTYPE html>
+//   <html>
+//   <head>
+//       <title>GAS Self-Update Dashboard</title>
+//       <style>
+//           html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+//           iframe { width: 100%; height: 100%; border: none; }
+//       </style>
+//   </head>
+//   <body>
+//       <iframe id="content-frame" src="https://script.google.com/macros/s/AKfycbwkKbU1fJ-bsVUi9ZQ8d3MVdT2FfTsG14h52R1K_bsreaL7RgmkC4JJrMtwiq5VZEYX-g/exec"></iframe>
+//       <script>
+//           function playBeep() {
+//               try {
+//                   var ctx = new (window.AudioContext || window.webkitAudioContext)();
+//                   var osc = ctx.createOscillator();
+//                   var gain = ctx.createGain();
+//                   osc.connect(gain);
+//                   gain.connect(ctx.destination);
+//                   osc.frequency.value = 880;
+//                   gain.gain.value = 0.3;
+//                   osc.start();
+//                   osc.stop(ctx.currentTime + 0.15);
+//               } catch(e) {}
+//           }
+//
+//           if (sessionStorage.getItem('gas-pending-sound')) {
+//               sessionStorage.removeItem('gas-pending-sound');
+//               playBeep();
+//           }
+//
+//           window.addEventListener('message', function(e) {
+//               if (e.data && e.data.type === 'gas-reload') {
+//                   sessionStorage.setItem('gas-pending-sound', '1');
+//                   window.location.reload();
+//               }
+//           });
+//       </script>
+//   </body>
+//   </html>
+//
+// How it works:
+//   1. GAS app sends postMessage({type:'gas-reload'}) after deploy
+//   2. Embedding page receives message, sets sessionStorage flag, reloads
+//   3. After reload, checks flag → plays 880Hz beep via AudioContext
+//   4. The GAS iframe loads fresh, auto-pulls latest from GitHub
+// The sessionStorage flag survives the reload but not tab close.
 //
 // RACE CONDITION — AUTO-DEPLOY CAN FIRE BEFORE CLAUDE CODE FINISHES:
 //   The auto-deploy pipeline is very fast: push → GitHub Action merge →
@@ -602,7 +642,7 @@
 //
 // =============================================
 
-var VERSION = "1.73";
+var VERSION = "1.74";
 var TITLE = "Attempt 10";
 
 function doGet() {
