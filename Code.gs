@@ -751,7 +751,7 @@
 //
 // =============================================
 
-var VERSION = "1.83";
+var VERSION = "1.84";
 var TITLE = "Attempt 14";
 
 function doGet() {
@@ -764,6 +764,7 @@ function doGet() {
       <style>
         html, body { height: 100%; margin: 0; overflow: auto; }
         body { font-family: Arial; display: flex; flex-direction: column; align-items: center; padding: 10px 0; box-sizing: border-box; }
+        #splash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0d47a1; z-index: 9999; transition: opacity 0.3s ease; }
         #version { font-size: 80px; font-weight: bold; color: #e65100; line-height: 1; }
         button { background: #e65100; color: white; border: none; padding: 8px 20px;
                  border-radius: 6px; cursor: pointer; font-size: 14px; margin-top: 10px; }
@@ -777,6 +778,7 @@ function doGet() {
       </style>
     </head>
     <body>
+      <div id="splash"></div>
       <h1 id="title" style="font-size: 28px; margin: 0 0 4px 0;">...</h1>
       <div id="version">...</div>
       <button onclick="checkForUpdates()">🔄 Pull Latest from GitHub</button>
@@ -918,6 +920,13 @@ function doGet() {
         }
         pollQuotaAndLimits();
         setInterval(pollQuotaAndLimits, 60000);
+
+        // Dark blue splash screen — fade out after 1 second
+        setTimeout(function() {
+          var splash = document.getElementById('splash');
+          splash.style.opacity = '0';
+          setTimeout(function() { splash.style.display = 'none'; }, 300);
+        }, 1000);
 
         function checkForUpdates() {
           document.getElementById('result').style.background = '#fff3e0';
